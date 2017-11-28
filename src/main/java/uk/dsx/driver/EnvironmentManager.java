@@ -9,5 +9,6 @@ import java.util.List;
  */
 public abstract class EnvironmentManager implements Closeable {
     public abstract boolean executeCommands(List<String> commands, String userName, String ip);
+    public abstract boolean uploadFile(Path from, Path to, String user, String ip);
     public abstract boolean uploadFiles(List<Path> files, String user, String ip);
 }
