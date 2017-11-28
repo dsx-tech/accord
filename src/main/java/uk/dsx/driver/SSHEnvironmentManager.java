@@ -1,5 +1,7 @@
 package uk.dsx.driver;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jcraft.jsch.*;
 import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
@@ -22,6 +24,10 @@ public class SSHEnvironmentManager extends EnvironmentManager {
     @Setter
     protected String keyPath = "pathForKey/ethereum.pem";
 
+    @JsonCreator
+    public SSHEnvironmentManager(@JsonProperty("keyPath") String keyPath){
+        this.keyPath = keyPath;
+    }
 
     protected JSch jsch = new JSch();
     private Session session;
@@ -89,6 +95,36 @@ public class SSHEnvironmentManager extends EnvironmentManager {
             return true;
         } catch (Exception e) {
             logger.error(e);
+        }
+        finally {
+            channel.disconnect();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean uploadFile(Path from, Path to, String user, String ip) {
+        try (FileOutputStream logStream = new FileOutputStream(logPath.resolve("log" + "_deploy.log").toFile(), true)) {
+            ChannelSftp channel = (ChannelSftp) getChannelWithType(user, ip, "sftp");
+            logger.error("Uploading files to: " + channel.getSession().getHost());
+            channel.setOutputStream(logStream);
+            channel.connect();
+            try (FileInputStream fis = new FileInputStream(from.toFile())) {
+                channel.put(fis, to.toString());
+                logger.debug("File {} uploaded to: {}", from.getFileName().toString(), channel.getSession().getHost());
+            } catch (SftpException e) {
+                e.printStackTrace();
+            }
+            return true;
+        }
+        catch (JSchException e) {
+            e.printStackTrace();
+        }
+        catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
         }
         finally {
             channel.disconnect();

@@ -1,28 +1,28 @@
 package uk.dsx.node;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.Getter;
 import lombok.Setter;
-
-import java.util.List;
+import uk.dsx.driver.EnvironmentManager;
 
 /**
  * Created by alexander on 22.11.17.
  */
+@JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        include = JsonTypeInfo.As.PROPERTY,
+        property = "type")
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = EthNode.class, name = "eth")
+})
 public abstract class AbstractNode {
-    @Setter
-    protected String user;
-    @Setter
-    protected String ip;
-    @Setter
+    @Setter @Getter
     protected String dockerName;
 
-    public abstract void prepareEnvironment(List<String> sharedFiles);
 
-    public abstract void startNode();
-
-    @Override
-    public String toString() {
-        return "user='" + user + '\'' +
-               ", ip='" + ip + '\'' +
-               ", dockerName='" + dockerName + '\'';
-    }
+    /*
+     * create files, load its to instance, run dockerfile
+     */
+    public abstract void startNode(EnvironmentManager client);
 }
