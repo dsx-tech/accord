@@ -18,4 +18,4 @@ echo 'console.log(admin.nodeInfo.enode);' > $NODE_DIR/getenode.js
 geth $GETH_COMMON js $NODE_DIR/getenode.js > $NODE_DIR/enode
 
 #RUN NODE
-nohup geth $GETH_COMMON --mine --minerthreads=1 --bootnodes BOOTNODES >> $NODE_DIR/eth.log &
+nohup geth $GETH_COMMON --mine --minerthreads=1 --bootnodes $BOOTNODES >> $NODE_DIR/eth.log &
