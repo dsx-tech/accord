@@ -1,2 +1,5 @@
 rootProject.name = 'accord'
 
+include 'common'
+include 'ethereum-chord'
+
