@@ -1,27 +1,17 @@
 package uk.dsx.accord.ethereum;
 
-import uk.dsx.Instance;
-import uk.dsx.InstanceManager;
-import uk.dsx.config.Configuration;
-import uk.dsx.ethereum.config.DefaultConfiguration;
+import uk.dsx.accord.common.Instance;
+import uk.dsx.accord.common.InstanceManager;
+import uk.dsx.accord.common.config.Configuration;
 
 import java.util.List;
 
 public class EthInstanceManager implements InstanceManager<EthInstance> {
 
-    EthConfigLoader configLoader = new EthConfigLoader();
 
-
-    // SOLVE GENERICS PROBLEM. Normal parametrization should help
     @Override
     public InstanceManager<EthInstance> withConfig(String config, Class<? extends Configuration> mapped) {
-        if (mapped.isAssignableFrom(DefaultConfiguration.class)) {
-            Class<DefaultConfiguration> mappedConfig = (Class<DefaultConfiguration>) mapped;
-            configLoader.loadConfig(config, mappedConfig);
-        }
-        // if (mapped.isAssignableFrom(AnotherConfig.class)
-        // do same with another loader
-        return this;
+        return null;
     }
 
     @Override

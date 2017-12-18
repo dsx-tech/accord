@@ -1,6 +1,6 @@
 package uk.dsx.accord.common;
 
-import uk.dsx.config.Configuration;
+import uk.dsx.accord.common.config.Configuration;
 
 //That not loader but i dont know how to name it
 // May be instance configurator

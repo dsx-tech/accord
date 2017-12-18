@@ -1,8 +1,8 @@
 package uk.dsx.accord.common.client;
 
-import uk.dsx.Client;
+import uk.dsx.accord.common.Client;
 
-public class LocalhostClient implements Client {
+public abstract class LocalhostClient implements Client {
     @Override
     public <C extends Client> C connect() throws InstantiationException {
         return null;
