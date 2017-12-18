@@ -1,6 +1,6 @@
 package uk.dsx.accord.common;
 
-import uk.dsx.config.Configuration;
+import uk.dsx.accord.common.config.Configuration;
 
 import java.util.List;
 

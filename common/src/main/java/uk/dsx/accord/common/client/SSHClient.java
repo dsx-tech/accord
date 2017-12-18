@@ -1,9 +1,10 @@
 package uk.dsx.accord.common.client;
 
 import com.jcraft.jsch.*;
-import uk.dsx.Client;
+import uk.dsx.accord.common.Client;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 
 public class SSHClient implements Client {
@@ -63,12 +64,20 @@ public class SSHClient implements Client {
     @Override
     public SSHClient get(String sourcePath, String targetPath) {
         try {
-            sftp.chmod(777, targetPath);
             sftp.get(sourcePath, targetPath);
         } catch (SftpException e) {
             throw new RuntimeException("Could not download file", e);
         }
-        return null;
+        return this;
+    }
+
+    @Override
+    public InputStream get(String targetPath) {
+        try {
+            return sftp.get(targetPath);
+        } catch (SftpException e) {
+            throw new RuntimeException("Could not download file", e);
+        }
     }
 
     @Override
@@ -81,6 +90,43 @@ public class SSHClient implements Client {
             e.printStackTrace();
         }
         return this;
+    }
+
+    public SSHClient mkdir(String dir) {
+        try {
+            sftp.mkdir(dir);
+        } catch (SftpException e) {
+            e.printStackTrace();
+        }
+        return this;
+    }
+
+    public SSHClient cd(String path) {
+        try {
+//            shell.
+            exec("cd " + path);
+            sftp.cd(path);
+        } catch (SftpException e) {
+            e.printStackTrace();
+        }
+        return this;
+    }
+
+    public SSHClient rmDir(String path) {
+        try {
+            sftp.rm(path);
+        } catch (SftpException e) {
+            e.printStackTrace();
+        }
+        return this;
+    }
+
+    public String ls(String path) {
+        try {
+            return sftp.ls(path).toString();
+        } catch (SftpException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
