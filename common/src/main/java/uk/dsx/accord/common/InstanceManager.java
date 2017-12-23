@@ -12,8 +12,8 @@ public interface InstanceManager<T extends Instance> {
 
     void downloadFromNodes(String source, String target);
 
-    void runAllNodes();
+    void run();
 
-    List<Instance> getAllInstances();
+    List<? extends Instance> getAllInstances();
 
 }

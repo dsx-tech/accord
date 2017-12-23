@@ -1,27 +1,28 @@
 package uk.dsx.accord.common;
 
-import java.util.List;
+import java.io.InputStream;
+import java.util.Collection;
 
 public interface Instance {
 
     void start();
 
-    void prepare();
+    Instance prepare();
 
-    void run();
+    Instance run();
 
-    void clean();
+    Instance clean();
 
     void terminate();
 
-    void addCommand(String command);
+    Instance addCommand(String command);
 
-    void addCommands(List<String> commands);
+    Instance addCommands(Collection<String> commands);
 
     void exec();
 
-    void uploadFiles(String path, List<String> files);
+    void uploadFile(String source, String target);
 
-    List<String> downloadFiles(List<String> path);
+    InputStream downloadFile(String path);
 
 }

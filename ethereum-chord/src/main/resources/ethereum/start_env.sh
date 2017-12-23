@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # INSTALL DOCKER AND GIVE PERMISSIONS
-sudo yum update -y
-sudo yum install -y docker
-sudo service docker start
+    sudo yum update -y
+    sudo yum install -y docker
+    sudo service docker start
 #sudo groupadd docker
 #sudo gpasswd -a $USER docker
 #newgrp docker
