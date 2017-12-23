@@ -62,7 +62,8 @@ public class EthConfigLoader implements ConfigurationLoader<DefaultConfiguration
                     return new EthNode(nodeName, instanceName, nodeType, nodeFiles);
                 }).collect(Collectors.toList());
 
-                return new EthInstance(instanceName, ip, port, keyPath, prepareEnvCommands, instanceFiles, client, nodes);
+//                return new EthInstance(instanceName, ip, port, keyPath, prepareEnvCommands, instanceFiles, client, nodes);
+                return new EthInstance(instanceName, ip, port, keyPath, prepareEnvCommands);
 
             }).collect(Collectors.toList());
 

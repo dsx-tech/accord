@@ -3,9 +3,10 @@ package uk.dsx.accord.common.client;
 import com.jcraft.jsch.*;
 import uk.dsx.accord.common.Client;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.InputStreamReader;
 
 public class SSHClient implements Client {
 
@@ -30,7 +31,7 @@ public class SSHClient implements Client {
 
     //TODO: that should be connection factory
     @Override
-    public SSHClient connect() throws InstantiationException {
+    public SSHClient connect() {
         try {
             //TODO: think about we must ignore connection step if session.isconnected or throw smth
             if (session == null || !session.isConnected()) {
@@ -45,7 +46,7 @@ public class SSHClient implements Client {
             }
         } catch (JSchException e) {
             e.printStackTrace();
-            throw new InstantiationException("Could not startup session");
+            throw new RuntimeException("Could not startup session");
         }
         return this;
     }
@@ -83,50 +84,36 @@ public class SSHClient implements Client {
     @Override
     public SSHClient exec(String command) {
         try {
-            PrintStream stream = new PrintStream(shell.getOutputStream());
-            stream.println(command);
-            stream.flush();
-        } catch (IOException e) {
+
+            ChannelExec channel = (ChannelExec) session.openChannel("exec");
+            InputStream in = channel.getInputStream();
+            channel.setErrStream(System.err);
+            channel.setCommand(command);
+            channel.connect();
+
+            StringBuilder message = new StringBuilder();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            String line = null;
+            while ((line = reader.readLine()) != null) {
+                message.append(line).append("\n");
+            }
+            channel.disconnect();
+            while (!channel.isClosed()) {
+            }
+            System.out.println(message.toString());
+
+//            PrintStream stream = new PrintStream(shell.getOutputStream());
+//            stream.println(command);
+//            stream.flush();
+        } catch (IOException | JSchException e) {
             e.printStackTrace();
         }
         return this;
     }
 
     public SSHClient mkdir(String dir) {
-        try {
-            sftp.mkdir(dir);
-        } catch (SftpException e) {
-            e.printStackTrace();
-        }
+        exec("mkdir -p " + dir);
         return this;
-    }
-
-    public SSHClient cd(String path) {
-        try {
-//            shell.
-            exec("cd " + path);
-            sftp.cd(path);
-        } catch (SftpException e) {
-            e.printStackTrace();
-        }
-        return this;
-    }
-
-    public SSHClient rmDir(String path) {
-        try {
-            sftp.rm(path);
-        } catch (SftpException e) {
-            e.printStackTrace();
-        }
-        return this;
-    }
-
-    public String ls(String path) {
-        try {
-            return sftp.ls(path).toString();
-        } catch (SftpException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Override
@@ -134,6 +121,12 @@ public class SSHClient implements Client {
         if (session.isConnected()) session.disconnect();
         if (sftp.isConnected()) sftp.disconnect();
         if (shell.isConnected()) shell.disconnect();
+        return this;
+    }
+
+    public SSHClient reconnect() {
+        close();
+        connect();
         return this;
     }
 
@@ -146,9 +139,9 @@ public class SSHClient implements Client {
         return session;
     }
 
-    private Channel setupChannel(String type) throws InstantiationException, JSchException {
+    private Channel setupChannel(String type) throws JSchException {
         if (session == null || !session.isConnected()) {
-            throw new InstantiationException("Session is not initialized");
+            throw new RuntimeException("Session is not initialized");
         }
         return session.openChannel(type);
     }
