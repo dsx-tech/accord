@@ -28,6 +28,7 @@ public class EthInstance extends AbstractInstance {
     private List<String> prepareEnvCommands;
 
     private List<Path> instanceFiles;
+    private List<String> nodeFiles;
 
     private Client client;
 
@@ -39,13 +40,15 @@ public class EthInstance extends AbstractInstance {
 
     public int nodeCount;
 
-    public EthInstance(String user, String ip, int port, String fingerprintPath, List<String> prepareEnvCommands) {
+    public EthInstance(String user, String ip, int port, String fingerprintPath, List<String> prepareEnvCommands, List<Path> instanceFiles) {
         this.name = user;
         this.ip = ip;
         this.port = port;
         this.fingerprintPath = fingerprintPath;
 //        this.prepareEnvCommands = prepareEnvCommands.stream().collect(Collectors.joining(" && "));
         this.prepareEnvCommands = prepareEnvCommands;
+        this.instanceFiles = instanceFiles;
+        // that bad
         this.client = new SSHClient(user, fingerprintPath, ip, port);
         this.commands = new ArrayList<>();
     }
@@ -130,8 +133,9 @@ public class EthInstance extends AbstractInstance {
         System.out.println(docker_run);
 
         client.mkdir(node_dir);
-        uploadFile("ethereum-chord/src/main/resources/ethereum/init.sh", node_dir + "/init.sh");
-        uploadFile("ethereum-chord/src/main/resources/ethereum/genesis.json", node_dir + "/genesis.json");
+        uploadFiles(node_dir);
+//        uploadFile("ethereum-chord/src/main/resources/ethereum/init.sh", node_dir + "/init.sh");
+//        uploadFile("ethereum-chord/src/main/resources/ethereum/genesis.json", node_dir + "/genesis.json");
         client.exec(docker_run);
     }
 
@@ -148,6 +152,12 @@ public class EthInstance extends AbstractInstance {
 
         }
         return enode;
+    }
+
+    public void uploadFiles(String nodeDir) {
+        instanceFiles.stream().forEach(path -> {
+            uploadFile(path.toString(), nodeDir + "/" + path.getFileName().toString());
+        });
     }
 
 }
