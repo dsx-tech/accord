@@ -27,7 +27,7 @@ public class Main {
                 "ethereum-chord/src/main/resources/ethereum/genesis.json"
         ).map(Paths::get).collect(Collectors.toList());
         EthInstance instance = new EthInstance(user, firstIp, port, key, prepareEnvCommands, files);
-        instance.uploadFiles("boot");
+//        instance.uploadFiles("boot");
         EthInstanceManager manager = new EthInstanceManager();
         manager.addInstance(instance).run();
         manager.terminate();
