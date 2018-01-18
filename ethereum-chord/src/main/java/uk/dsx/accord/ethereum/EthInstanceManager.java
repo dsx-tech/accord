@@ -22,8 +22,8 @@ public class EthInstanceManager implements InstanceManager<EthInstance> {
     public InstanceManager<EthInstance> withConfig(String config, Class<? extends Configuration> mapped) {
         EthConfigLoader loader = new EthConfigLoader();
         loader.loadConfig(config, (Class<DefaultConfiguration>) mapped);
+        instances.addAll(loader.instances);
         return this;
-//        throw new UnsupportedOperationException();
     }
 
     public InstanceManager<EthInstance> addInstance(EthInstance instance) {
