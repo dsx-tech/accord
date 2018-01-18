@@ -1,5 +1,7 @@
 package uk.dsx.accord.ethereum;
 
+import uk.dsx.accord.ethereum.config.DefaultConfiguration;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -26,11 +28,12 @@ public class Main {
                 "ethereum-chord/src/main/resources/ethereum/init.sh",
                 "ethereum-chord/src/main/resources/ethereum/genesis.json"
         ).map(Paths::get).collect(Collectors.toList());
-        EthInstance instance = new EthInstance(user, firstIp, port, key, prepareEnvCommands, files);
+//        EthInstance instance = new EthInstance(user, firstIp, port, key, prepareEnvCommands, files);
 //        instance.uploadFiles("boot");
         EthInstanceManager manager = new EthInstanceManager();
-        manager.addInstance(instance).run();
-        manager.terminate();
+        manager.withConfig("", DefaultConfiguration.class);
+//        manager.addInstance(instance).run();
+//        manager.terminate();
     }
 
 }

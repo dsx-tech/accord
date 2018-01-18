@@ -1,6 +1,7 @@
 package uk.dsx.accord.ethereum;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import uk.dsx.accord.ethereum.config.NodeType;
@@ -11,6 +12,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class EthNode {
 
     private String name;

@@ -1,12 +1,12 @@
-
 all-nodes-files:
   - path1
   - path2
 
 instances:
   - name: ec-2-one
-    ip: ip
-    port : port
+    user: ec2-user
+    ip: 123
+    port : 1234
     fingerprint: key
     prepare-env-commands:
       - sudo yum update
@@ -16,12 +16,11 @@ instances:
     instance-files:
       - machine-file1
       - machine-file2
-    # Files that put on each node (maybe need for env initialization) 
+    # Files that put on each node (maybe need for env initialization)
     instance-specified-nodes-files:
       - node-file1
       - node-file2
     nodes:
-      boot1: 1
       - name: eth-node
         type: ETH
         # Node-specified files
