@@ -3,10 +3,10 @@ package uk.dsx.accord.ethereum;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import uk.dsx.accord.common.ConfigurationLoader;
-import uk.dsx.accord.common.client.SSHClient;
 import uk.dsx.accord.ethereum.config.DefaultConfiguration;
 import uk.dsx.accord.ethereum.config.NodeType;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,41 +32,37 @@ public class EthConfigLoader implements ConfigurationLoader<DefaultConfiguration
     // MANY BAD CODE mapping libraries could help
 
     @Override
-    public void loadConfig(String confFile, Class<DefaultConfiguration> defaultConfigurationClass) {
+    public void loadConfig(String confFile, Class<? extends DefaultConfiguration> defaultConfigurationClass) {
         try {
+
             ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-            DefaultConfiguration configuration = mapper.readValue(confFile, defaultConfigurationClass);
+            DefaultConfiguration configuration = mapper.readValue(new File(confFile), defaultConfigurationClass);
 
             List<Path> allNodesFiles = mapStringsIntoPaths(configuration.getAllNodeFiles());
 
             instances = configuration.getInstances().stream().map(instanceConfig -> {
-
-                //Instance mapping
-                String instanceName = instanceConfig.getName();
-                String user = instanceConfig.getUser();
-                String ip = instanceConfig.getIp();
-                int port = instanceConfig.getPort();
-                String keyPath = instanceConfig.getFingerprintPath();
-                List<String> prepareEnvCommands = instanceConfig.getPrepareEnvCommands();
-                List<Path> instanceFiles = mapStringsIntoPaths(instanceConfig.getInstanceFiles());
-                List<Path> instaceNodeFiles = mapStringsIntoPaths(instanceConfig.getInstanceSpecifiedNodesFiles());
-                SSHClient client = new SSHClient(user, keyPath, ip, port);
-
                 //Nodes creation
-                List<EthNode> nodes = instanceConfig.getNodes().stream().map(nodeConfig -> {
-                    String nodeName = nodeConfig.getName();
-                    NodeType nodeType = nodeConfig.getType();
-                    List<Path> nodeFiles = mapStringsIntoPaths(nodeConfig.getNodeFiles());
-                    nodeFiles.addAll(instaceNodeFiles);
-                    nodeFiles.addAll(allNodesFiles);
-                    return new EthNode(nodeName, instanceName, nodeType, nodeFiles);
-                }).collect(Collectors.toList());
+                List<EthNode> nodes = instanceConfig.getNodes().stream().map(nodeConfig -> EthNode.builder()
+                        .name(nodeConfig.getName())
+                        .parentInstance(instanceConfig.getName())
+                        .type(nodeConfig.getType())
+                        .nodeFiles(mapStringsIntoPaths(nodeConfig.getNodeFiles()))
+                        .nodeFiles(mapStringsIntoPaths(instanceConfig.getInstanceSpecifiedNodesFiles()))
+                        .nodeFiles(allNodesFiles)
+                        .build()).collect(Collectors.toList());
 
-//                return new EthInstance(instanceName, ip, port, keyPath, prepareEnvCommands, instanceFiles, client, nodes);
-                return new EthInstance(instanceName, ip, port, keyPath, prepareEnvCommands, null);
+                return EthInstance.builder()
+                        .user(instanceConfig.getUser())
+                        .ip(instanceConfig.getIp())
+                        .port(instanceConfig.getPort())
+                        .fingerprintPath(instanceConfig.getFingerprintPath())
+                        .prepareEnvCommands(instanceConfig.getPrepareEnvCommands())
+                        .instanceFiles(mapStringsIntoPaths(instanceConfig.getInstanceFiles()))
+                        .nodes(nodes)
+                        .build();
 
             }).collect(Collectors.toList());
-
+            System.out.println("done");
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -1,6 +1,9 @@
 package uk.dsx.accord.ethereum;
 
+import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Singular;
 import uk.dsx.accord.common.AbstractInstance;
 import uk.dsx.accord.common.Client;
 import uk.dsx.accord.common.client.SSHClient;
@@ -9,15 +12,20 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
+@Builder
 public class EthInstance extends AbstractInstance {
 
     private final String user_dir = "/home/ec2-user";
     private final String shared_dir = user_dir + "/shared_dir";
 
-    private String name;
+    private String user;
 
     private String ip;
 
@@ -25,13 +33,18 @@ public class EthInstance extends AbstractInstance {
 
     private String fingerprintPath;
 
+    @Singular
     private List<String> prepareEnvCommands;
 
+    @Singular
     private List<Path> instanceFiles;
-    private List<String> nodeFiles;
+
+    @Singular
+    private List<Path> nodeFiles;
 
     private Client client;
 
+    @Singular
     private List<EthNode> nodes;
 
     private List<String> commands;
@@ -40,19 +53,6 @@ public class EthInstance extends AbstractInstance {
 
     public int nodeCount;
 
-    public EthInstance(String user, String ip, int port, String fingerprintPath, List<String> prepareEnvCommands, List<Path> instanceFiles) {
-        this.name = user;
-        this.ip = ip;
-        this.port = port;
-        this.fingerprintPath = fingerprintPath;
-//        this.prepareEnvCommands = prepareEnvCommands.stream().collect(Collectors.joining(" && "));
-        this.prepareEnvCommands = prepareEnvCommands;
-        this.instanceFiles = instanceFiles;
-        // that bad
-        this.client = new SSHClient(user, fingerprintPath, ip, port);
-        this.commands = new ArrayList<>();
-    }
-
     @Override
     public void start() {
         throw new UnsupportedOperationException();
@@ -60,6 +60,7 @@ public class EthInstance extends AbstractInstance {
 
     @Override
     public EthInstance prepare() {
+        this.client = new SSHClient(user, fingerprintPath, ip, port);
         addCommands(prepareEnvCommands);
         return this;
     }
@@ -134,8 +135,6 @@ public class EthInstance extends AbstractInstance {
 
         client.mkdir(node_dir);
         uploadFiles(node_dir);
-//        uploadFile("ethereum-chord/src/main/resources/ethereum/init.sh", node_dir + "/init.sh");
-//        uploadFile("ethereum-chord/src/main/resources/ethereum/genesis.json", node_dir + "/genesis.json");
         client.exec(docker_run);
     }
 

@@ -2,6 +2,7 @@ package uk.dsx.accord.ethereum;
 
 import uk.dsx.accord.common.InstanceManager;
 import uk.dsx.accord.common.config.Configuration;
+import uk.dsx.accord.ethereum.config.DefaultConfiguration;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,7 +20,10 @@ public class EthInstanceManager implements InstanceManager<EthInstance> {
 
     @Override
     public InstanceManager<EthInstance> withConfig(String config, Class<? extends Configuration> mapped) {
-        throw new UnsupportedOperationException();
+        EthConfigLoader loader = new EthConfigLoader();
+        loader.loadConfig(config, (Class<DefaultConfiguration>) mapped);
+        return this;
+//        throw new UnsupportedOperationException();
     }
 
     public InstanceManager<EthInstance> addInstance(EthInstance instance) {

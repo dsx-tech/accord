@@ -11,7 +11,7 @@ public class InstanceConfig {
     @JsonProperty("name")
     private String name;
 
-    @JsonProperty("ip")
+    @JsonProperty("user")
     private String user;
 
     @JsonProperty("ip")

@@ -6,6 +6,6 @@ import uk.dsx.accord.common.config.Configuration;
 // May be instance configurator
 public interface ConfigurationLoader<Config extends Configuration> {
 
-    void loadConfig(String confFile, Class<Config> configClass);
+    void loadConfig(String confFile, Class<? extends Config> configClass);
 
 }
