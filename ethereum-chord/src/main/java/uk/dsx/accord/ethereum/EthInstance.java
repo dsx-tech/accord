@@ -39,9 +39,6 @@ public class EthInstance extends AbstractInstance {
     @Singular
     private List<Path> instanceFiles;
 
-    @Singular
-    private List<Path> nodeFiles;
-
     private Client client;
 
     @Singular
@@ -60,14 +57,16 @@ public class EthInstance extends AbstractInstance {
 
     @Override
     public EthInstance prepare() {
-        this.client = new SSHClient(user, fingerprintPath, ip, port);
         addCommands(prepareEnvCommands);
         return this;
     }
 
     @Override
     public EthInstance run() {
-        // Maybe Map<String, String> params??
+        if (client == null) {
+            this.client = new SSHClient(user, fingerprintPath, ip, port);
+        }
+
         client.connect();
         return this;
     }
