@@ -4,6 +4,8 @@ import uk.dsx.accord.common.InstanceManager;
 import uk.dsx.accord.common.Processor;
 import uk.dsx.accord.common.config.Configuration;
 import uk.dsx.accord.ethereum.config.DefaultConfiguration;
+import uk.dsx.accord.ethereum.processor.EthRunProcessor;
+import uk.dsx.accord.ethereum.processor.EthTerminateProcessor;
 
 import java.util.Collection;
 import java.util.List;
@@ -20,12 +22,13 @@ public class EthInstanceManager implements InstanceManager<EthInstance> {
     public EthInstanceManager() {
         runProcessor = new EthRunProcessor();
         terminateProcessor = new EthTerminateProcessor();
+        instanceContainer = new EthInstanceContainer();
     }
 
     @Override
     public InstanceManager<EthInstance> withConfig(String config, Class<? extends Configuration> mapped) {
         EthConfigLoader loader = new EthConfigLoader();
-        instanceContainer = loader.loadConfig(config, (Class<DefaultConfiguration>) mapped);
+        instanceContainer.apply(loader.loadConfig(config, (Class<DefaultConfiguration>) mapped));
         return this;
     }
 
