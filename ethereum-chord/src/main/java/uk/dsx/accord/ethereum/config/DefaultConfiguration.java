@@ -7,7 +7,7 @@ import uk.dsx.accord.common.config.Configuration;
 import java.util.List;
 
 @Data
-public class DefaultConfiguration extends Configuration {
+public class DefaultConfiguration implements Configuration {
 
     @JsonProperty("all-nodes-files")
     private List<String> allNodeFiles;

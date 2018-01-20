@@ -1,11 +1,14 @@
 package uk.dsx.accord.ethereum;
 
+import uk.dsx.accord.common.InstanceProcessor;
+
 import java.util.List;
 
-@Deprecated
-public class DefaultEthRunner {
+public class EthRunProcessor implements InstanceProcessor<EthInstanceContainer> {
 
-    public void run(List<EthInstance> instances) {
+    @Override
+    public void process(EthInstanceContainer container) {
+        List<EthInstance> instances = container.getInstances();
         EthInstance bootInstance = instances.stream().findFirst().orElseThrow(() -> new RuntimeException("No instances"));
         bootInstance.run()
                 .prepare()
@@ -22,7 +25,6 @@ public class DefaultEthRunner {
                 instance.runNode("node" + port, boot_enode, port);
             }
         }
-
     }
 
 }

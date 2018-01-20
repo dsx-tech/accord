@@ -1,39 +1,42 @@
 package uk.dsx.accord.ethereum;
 
 import uk.dsx.accord.common.InstanceManager;
+import uk.dsx.accord.common.Processor;
 import uk.dsx.accord.common.config.Configuration;
 import uk.dsx.accord.ethereum.config.DefaultConfiguration;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 public class EthInstanceManager implements InstanceManager<EthInstance> {
 
-    private DefaultEthRunner runner;
-    private List<EthInstance> instances;
+    //Empty now
+    private List<Processor<EthInstanceContainer>> processors;
+    private Processor<EthInstanceContainer> runProcessor;
+    private Processor<EthInstanceContainer> terminateProcessor;
+    private EthInstanceContainer instanceContainer;
+
 
     public EthInstanceManager() {
-        this.runner = new DefaultEthRunner();
-        this.instances = new ArrayList<>();
+        runProcessor = new EthRunProcessor();
+        terminateProcessor = new EthTerminateProcessor();
     }
 
     @Override
     public InstanceManager<EthInstance> withConfig(String config, Class<? extends Configuration> mapped) {
         EthConfigLoader loader = new EthConfigLoader();
-        loader.loadConfig(config, (Class<DefaultConfiguration>) mapped);
-        instances.addAll(loader.instances);
+        instanceContainer = loader.loadConfig(config, (Class<DefaultConfiguration>) mapped);
         return this;
     }
 
     public InstanceManager<EthInstance> addInstance(EthInstance instance) {
-        instances.add(instance);
+        instanceContainer.getInstances().add(instance);
         return this;
     }
 
 
-    public InstanceManager<EthInstance> addAllInstance(Collection<EthInstance> instance) {
-        instances.addAll(instances);
+    public InstanceManager<EthInstance> addAllInstances(Collection<EthInstance> instance) {
+        instanceContainer.getInstances().addAll(instance);
         return this;
     }
 
@@ -49,15 +52,16 @@ public class EthInstanceManager implements InstanceManager<EthInstance> {
 
     @Override
     public void run() {
-        runner.run(instances);
+//        processors.forEach(processor -> processor.process());
+        runProcessor.process(instanceContainer);
     }
 
     public void terminate() {
-        instances.forEach(EthInstance::terminate);
+        terminateProcessor.process(instanceContainer);
     }
 
     @Override
     public List<EthInstance> getAllInstances() {
-        return instances;
+        return instanceContainer.getInstances();
     }
 }
