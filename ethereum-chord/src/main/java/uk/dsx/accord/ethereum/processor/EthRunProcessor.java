@@ -1,6 +1,8 @@
-package uk.dsx.accord.ethereum;
+package uk.dsx.accord.ethereum.processor;
 
 import uk.dsx.accord.common.InstanceProcessor;
+import uk.dsx.accord.ethereum.EthInstance;
+import uk.dsx.accord.ethereum.EthInstanceContainer;
 
 import java.util.List;
 
@@ -17,12 +19,12 @@ public class EthRunProcessor implements InstanceProcessor<EthInstanceContainer> 
 
         //Start bootNode
         bootInstance.runNode("boot", "boot", 30303);
-        String boot_enode = bootInstance.getEnode("boot");
+        String bootEnode = bootInstance.getEnode("boot");
 
         // Must be EthNode.run
         for (EthInstance instance : instances) {
             for (int port = 30304; port < 30305; port++) {
-                instance.runNode("node" + port, boot_enode, port);
+                instance.runNode("node" + port, bootEnode, port);
             }
         }
     }
