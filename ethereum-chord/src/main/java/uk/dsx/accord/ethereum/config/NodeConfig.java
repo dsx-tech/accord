@@ -15,6 +15,9 @@ public class NodeConfig {
     @JsonProperty("type")
     private NodeType type;
 
+    @JsonProperty("port")
+    private Integer port;
+
     @JsonProperty("node-files")
     private List<String> nodeFiles;
 

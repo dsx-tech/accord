@@ -24,9 +24,14 @@ instances:
       - mock-node-file1
       - mock-node-file2
     nodes:
-      - name: mock-node
+      - name: boot
+        port: 30304
+        type: ETH
+
+      - name: first
+        port: 30305
         type: ETH
         # Node-specified files
-        node-files:
-          - specific-file
-          - specific-file2
+#        node-files:
+#          - specific-file
+#          - specific-file2
