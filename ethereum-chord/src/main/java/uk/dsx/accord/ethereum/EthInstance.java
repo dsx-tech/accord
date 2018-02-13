@@ -91,7 +91,7 @@ public class EthInstance extends AbstractInstance {
 
     @Override
     public EthInstance addCommands(Collection<String> commands) {
-        commands.addAll(commands);
+        this.commands.addAll(commands);
         return this;
     }
 
@@ -153,7 +153,7 @@ public class EthInstance extends AbstractInstance {
     }
 
     public void uploadFiles(String nodeDir) {
-        instanceFiles.stream().forEach(path -> {
+        instanceFiles.forEach(path -> {
             uploadFile(path.toString(), nodeDir + "/" + path.getFileName().toString());
         });
     }

@@ -17,6 +17,10 @@ public class EthNode {
 
     private String name;
 
+    private String ip;
+
+    private Integer port;
+
     private String parentInstance;
 
     private NodeType type;

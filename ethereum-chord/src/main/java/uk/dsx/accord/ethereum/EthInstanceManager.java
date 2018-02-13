@@ -9,6 +9,8 @@ import uk.dsx.accord.ethereum.processor.EthTerminateProcessor;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class EthInstanceManager implements InstanceManager<EthInstance> {
 
@@ -41,6 +43,12 @@ public class EthInstanceManager implements InstanceManager<EthInstance> {
     public InstanceManager<EthInstance> addAllInstances(Collection<EthInstance> instance) {
         instanceContainer.getInstances().addAll(instance);
         return this;
+    }
+
+    public Map<String, String> getAdresses() {
+        return instanceContainer.getInstances().stream()
+                .flatMap(instance -> instance.getNodes().stream())
+                .collect(Collectors.toMap(EthNode::getIp, node -> "" + node.getPort()));
     }
 
     @Override

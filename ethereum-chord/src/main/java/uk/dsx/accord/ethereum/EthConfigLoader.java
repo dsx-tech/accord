@@ -9,8 +9,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static java.util.Objects.isNull;
 
 public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, DefaultConfiguration> {
 
@@ -27,6 +30,8 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
                 //Nodes creation
                 List<EthNode> nodes = instanceConfig.getNodes().stream().map(nodeConfig -> EthNode.builder()
                         .name(nodeConfig.getName())
+                        .ip(instanceConfig.getIp())
+                        .port(nodeConfig.getPort())
                         .parentInstance(instanceConfig.getName())
                         .type(nodeConfig.getType())
                         .nodeFiles(mapStringsIntoPaths(nodeConfig.getNodeFiles()))
@@ -55,6 +60,9 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
     }
 
     private List<Path> mapStringsIntoPaths(List<String> stringPaths) {
+        if (isNull(stringPaths)) {
+            return new ArrayList<>();
+        }
         return stringPaths.stream().map(path -> Paths.get(path)).collect(Collectors.toList());
     }
 }
