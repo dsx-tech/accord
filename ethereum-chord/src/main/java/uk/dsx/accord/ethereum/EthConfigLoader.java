@@ -2,7 +2,9 @@ package uk.dsx.accord.ethereum;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import uk.dsx.accord.common.Client;
 import uk.dsx.accord.common.ConfigLoader;
+import uk.dsx.accord.common.client.SSHClient;
 import uk.dsx.accord.ethereum.config.DefaultConfiguration;
 
 import java.io.File;
@@ -27,6 +29,18 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
             List<Path> allNodesFiles = mapStringsIntoPaths(configuration.getAllNodeFiles());
 
             List<EthInstance> instances = configuration.getInstances().stream().map(instanceConfig -> {
+
+                final String user_dir = "/home/ec2-user";
+                final String shared_dir = user_dir + "/shared_dir";
+
+
+                Client client = SSHClient.builder()
+                        .user(instanceConfig.getUser())
+                        .privateKey(instanceConfig.getFingerprintPath())
+                        .host(instanceConfig.getIp())
+                        .port(instanceConfig.getPort())
+                        .build();
+
                 //Nodes creation
                 List<EthNode> nodes = instanceConfig.getNodes().stream().map(nodeConfig -> EthNode.builder()
                         .name(nodeConfig.getName())
@@ -34,6 +48,8 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
                         .port(nodeConfig.getPort())
                         .parentInstance(instanceConfig.getName())
                         .type(nodeConfig.getType())
+                        .client(client)
+                        .dir(shared_dir + "/" + nodeConfig.getName())
                         .nodeFiles(mapStringsIntoPaths(nodeConfig.getNodeFiles()))
                         .nodeFiles(mapStringsIntoPaths(instanceConfig.getInstanceSpecifiedNodesFiles()))
                         .nodeFiles(allNodesFiles)
@@ -44,6 +60,7 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
                         .ip(instanceConfig.getIp())
                         .port(instanceConfig.getPort())
                         .fingerprintPath(instanceConfig.getFingerprintPath())
+                        .dir(shared_dir)
                         .prepareEnvCommands(instanceConfig.getPrepareEnvCommands())
                         .instanceFiles(mapStringsIntoPaths(instanceConfig.getInstanceFiles()))
                         .nodes(nodes)
@@ -51,7 +68,7 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
 
             }).collect(Collectors.toList());
 
-            System.out.println("done");
+            System.out.println("Mapped");
             return new EthInstanceContainer(instances);
         } catch (IOException e) {
             e.printStackTrace();

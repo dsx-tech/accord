@@ -1,6 +1,10 @@
 package uk.dsx.accord.common.client;
 
 import com.jcraft.jsch.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import uk.dsx.accord.common.Client;
 
 import java.io.BufferedReader;
@@ -8,10 +12,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@Data
 public class SSHClient implements Client {
 
     private String user;
-    private String prvKey;
+    private String privateKey;
     private String host;
     private int port;
 
@@ -22,9 +30,9 @@ public class SSHClient implements Client {
     private ChannelSftp sftp;
 
 
-    public SSHClient(String user, String password, String host, int port) {
+    public SSHClient(String user, String privatevKey, String host, int port) {
         this.user = user;
-        this.prvKey = password;
+        this.privateKey = privatevKey;
         this.host = host;
         this.port = port;
     }
@@ -132,7 +140,7 @@ public class SSHClient implements Client {
 
     private Session setupSession() throws JSchException {
         JSch jSch = new JSch();
-        jSch.addIdentity(prvKey);
+        jSch.addIdentity(privateKey);
         Session session = jSch.getSession(user, host, port);
         session.setConfig("StrictHostKeyChecking", "no");
         session.setDaemonThread(true);
