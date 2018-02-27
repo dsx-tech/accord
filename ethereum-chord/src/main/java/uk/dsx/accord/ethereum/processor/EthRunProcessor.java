@@ -5,51 +5,39 @@ import uk.dsx.accord.ethereum.EthInstance;
 import uk.dsx.accord.ethereum.EthInstanceContainer;
 import uk.dsx.accord.ethereum.EthNode;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 public class EthRunProcessor implements InstanceProcessor<EthInstanceContainer> {
 
     @Override
     public void process(EthInstanceContainer container) {
         List<EthInstance> instances = container.getInstances();
-        EthInstance bootInstance = instances.stream().findFirst().orElseThrow(() -> new RuntimeException("No instances"));
-        bootInstance.run()
+
+
+        instances.forEach(instance -> instance
+                .run()
                 .prepare()
-                .clean()
-                .exec();
+                .exec());
 
         //Start bootNode
-        bootInstance.runNode("boot", "boot", 30303);
-        String bootEnode = bootInstance.getEnode("boot");
+        EthNode bootNode = instances.stream()
+                .map(EthInstance::getNodes)
+                .filter(Objects::nonNull)
+                .flatMap(Collection::stream)
+                .findFirst().orElseThrow(() -> new RuntimeException("aaa"));
 
-        // Must be EthNode.run
-        for (EthInstance instance : instances) {
-            for (int port = 30304; port < 30305; port++) {
-                instance.runNode("node" + port, bootEnode, port);
-            }
-        }
-    }
+        // Run bootNode
+        bootNode.run("");
+        String bootEnode = bootNode.getEnode();
 
-    public void process2(EthInstanceContainer container) {
-        boolean booted = false;
-        List<EthInstance> instances = container.getInstances();
-        EthInstance bootInstance = instances.stream().findFirst().orElseThrow(() -> new RuntimeException("No instances"));
-        bootInstance.run()
-                .prepare()
-                .clean()
-                .exec();
-//        EthNode bootNode = bootInstance.getNodes().stream().findFirst().orElseThrow(() -> new RuntimeException("No nodes"));
-//        bootInstance.runNode(bootNode.getName(), "boot", bootNode.getPort());
-        //Start bootNode
-        bootInstance.runNode("boot", "boot", 30303);
-        String bootEnode = bootInstance.getEnode("boot");
-
-        // Must be EthNode.run
-        for (EthInstance instance : instances) {
-            for (EthNode node : instance.getNodes()) {
-                instance.runNode(node.getName(), bootEnode, node.getPort());
-            }
-        }
+        // Run node
+        instances.stream()
+                .map(EthInstance::getNodes)
+                .filter(Objects::nonNull)
+                .flatMap(Collection::stream)
+                .forEach(ethNode -> ethNode.run(bootEnode));
     }
 
 }
