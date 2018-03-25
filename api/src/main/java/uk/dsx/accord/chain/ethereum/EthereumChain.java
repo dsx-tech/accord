@@ -40,10 +40,9 @@ public class EthereumChain extends BasicChain<EthereumPeerInfo,EthereumBlock,Eth
         return Integer.parseInt(result.substring(2));
     }
 
-    public double getBalance(String address ) throws UnirestException {
+    public long getBalance(String address ) throws UnirestException {
         String weiBalance = HttpHelper.<String, List>post(address, "eth_getBalance", asList(address, "pending"));
-        //TODO use converter, this is not worked
-        return Double.parseDouble(weiBalance);
+        return Long.parseLong(weiBalance.substring(2, weiBalance.length()), 16);
     }
 
     public int getTransactionCount(String address) throws UnirestException {

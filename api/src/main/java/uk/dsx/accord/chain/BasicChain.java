@@ -20,6 +20,6 @@ public abstract class BasicChain<TPeerInfo extends AbstractPeerInfo,
     public abstract TBlock getBlock(String hash) throws UnirestException;
     public abstract String sendTransaction(TTransaction transaction) throws UnirestException;
     public abstract int getPeerCount() throws UnirestException;
-    public abstract double getBalance(String address) throws UnirestException;
+    public abstract long getBalance(String address) throws UnirestException;
     public abstract int getTransactionCount(String address) throws UnirestException;
 }
