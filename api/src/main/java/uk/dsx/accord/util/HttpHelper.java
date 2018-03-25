@@ -9,18 +9,12 @@ import com.mashape.unirest.http.exceptions.UnirestException;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.Collections;
+import java.util.List;
+
 public class HttpHelper {
-    //TODO more reuse
-    public static <T> T post(String url, String method) throws UnirestException {
-        JSONObject body = new JSONObject();
-        body.append("method", method);
-        HttpResponse<JsonNode> resp = Unirest.post(url)
-                .body(body)
-                .asJson();
-        JsonNode node = resp.getBody();
-        String a = node.getObject().get("result").toString();
-        return new Gson().fromJson(a, new TypeToken<T>() {}.getType());
-    }
+
+    public static final List EMPTY_PARAMETERS = Collections.emptyList();
 
     public static <T, TParam> T post(String url, String method, TParam bodyObj) throws UnirestException {
         JSONObject body = new JSONObject();
