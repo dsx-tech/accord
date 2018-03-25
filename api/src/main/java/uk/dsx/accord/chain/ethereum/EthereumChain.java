@@ -1,5 +1,6 @@
 package uk.dsx.accord.chain.ethereum;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import lombok.Value;
 import uk.dsx.accord.block.EthereumBlock;
@@ -16,6 +17,7 @@ import static uk.dsx.accord.util.HttpHelper.EMPTY_PARAMETERS;
 @Value
 public class EthereumChain extends BasicChain<EthereumPeerInfo,EthereumBlock,EthereumTransaction> {
 
+    @JsonCreator
     public EthereumChain(String address) {
         super(address);
     }
