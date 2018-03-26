@@ -1,9 +1,6 @@
 package uk.dsx.accord.ethereum;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import uk.dsx.accord.common.Client;
 import uk.dsx.accord.common.enums.State;
 import uk.dsx.accord.ethereum.config.NodeType;
@@ -28,10 +25,13 @@ public class EthNode {
 
     private Integer port;
 
+    private Integer rpcPort;
+
     private String parentInstance;
 
     private NodeType type;
 
+    @Singular
     private List<Path> nodeFiles;
 
     private String dir;
@@ -47,6 +47,7 @@ public class EthNode {
                 .param("-idt")
                 .name(name)
                 .port(port + ":30303")
+                .port(rpcPort + ":8101")
                 .volume(dir + ":" + "/node_dir/")
                 .variable("BOOTNODES=\'" + bootNode + "\'")
                 .variable("NODE_DIR=/node_dir")
@@ -65,9 +66,7 @@ public class EthNode {
     }
 
     public void uploadFiles(String nodeDir) {
-        nodeFiles.forEach(path -> {
-            uploadFile(path.toString(), nodeDir + "/" + path.getFileName().toString());
-        });
+        nodeFiles.forEach(path -> uploadFile(path.toString(), nodeDir + "/" + path.getFileName().toString()));
     }
 
     public void uploadFile(String source, String target) {

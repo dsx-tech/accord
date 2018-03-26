@@ -46,12 +46,14 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
                         .name(nodeConfig.getName())
                         .ip(instanceConfig.getIp())
                         .port(nodeConfig.getPort())
+                        .rpcPort(nodeConfig.getRpcPort())
                         .parentInstance(instanceConfig.getName())
                         .type(nodeConfig.getType())
                         .client(client)
                         .dir(shared_dir + "/" + nodeConfig.getName())
                         .nodeFiles(mapStringsIntoPaths(nodeConfig.getNodeFiles()))
                         .nodeFiles(mapStringsIntoPaths(instanceConfig.getInstanceSpecifiedNodesFiles()))
+                        .nodeFiles(mapStringsIntoPaths(instanceConfig.getInstanceFiles()))
                         .nodeFiles(allNodesFiles)
                         .build()).collect(Collectors.toList());
 
@@ -61,6 +63,7 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
                         .port(instanceConfig.getPort())
                         .fingerprintPath(instanceConfig.getFingerprintPath())
                         .dir(shared_dir)
+                        .commands(new ArrayList<>())
                         .prepareEnvCommands(instanceConfig.getPrepareEnvCommands())
                         .instanceFiles(mapStringsIntoPaths(instanceConfig.getInstanceFiles()))
                         .nodes(nodes)

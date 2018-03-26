@@ -1,11 +1,11 @@
-all-nodes-files:
-  - path1
-  - path2
+#all-nodes-files:
+#  - path1
+#  - path2
 
 instances:
   - name: ec-2-one
     user: ec2-user
-    ip: 123
+    ip: 54.89.139.205
     port : 22
     fingerprint: ethereum-chord/src/main/resources/ethereum/eth-new.pem
     prepare-env-commands:
@@ -20,16 +20,23 @@ instances:
       - ethereum-chord/src/main/resources/ethereum/init.sh
       - ethereum-chord/src/main/resources/ethereum/genesis.json
     # Files that put on each node (maybe need for env initialization)
-    instance-specified-nodes-files:
-      - mock-node-file1
-      - mock-node-file2
+#    instance-specified-nodes-files:
+#      - mock-node-file1
+#      - mock-node-file2
     nodes:
       - name: boot
         port: 30304
+        rpc-port: 8101
         type: ETH
 
       - name: first
         port: 30305
+        rpc-port: 8102
+        type: ETH
+
+      - name: second
+        port: 30306
+        rpc-port: 8103
         type: ETH
         # Node-specified files
 #        node-files:

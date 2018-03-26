@@ -18,6 +18,7 @@ public class EthRunProcessor implements InstanceProcessor<EthInstanceContainer> 
 
         instances.forEach(instance -> instance
                 .run()
+                .clean()
                 .prepare()
                 .exec());
 
@@ -29,7 +30,7 @@ public class EthRunProcessor implements InstanceProcessor<EthInstanceContainer> 
                 .findFirst().orElseThrow(() -> new RuntimeException("aaa"));
 
         // Run bootNode
-        bootNode.run("");
+        bootNode.run("enode://boot@127.0.0.1:1111");
         String bootEnode = bootNode.getEnode();
 
         // Run node
@@ -37,6 +38,7 @@ public class EthRunProcessor implements InstanceProcessor<EthInstanceContainer> 
                 .map(EthInstance::getNodes)
                 .filter(Objects::nonNull)
                 .flatMap(Collection::stream)
+                .filter(node -> !node.equals(bootNode))
                 .forEach(ethNode -> ethNode.run(bootEnode));
     }
 

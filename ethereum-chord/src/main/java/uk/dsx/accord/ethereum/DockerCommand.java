@@ -12,11 +12,14 @@ import java.util.stream.Collectors;
 public class DockerCommand {
     String command;
     String name;
-    String port;
+    //    String port;
     String volume;
 
     @Singular
     List<String> params;
+
+    @Singular
+    List<String> ports;
 
     @Singular
     List<String> variables;
@@ -29,11 +32,13 @@ public class DockerCommand {
     public String toString() {
         String paramString = params.stream().collect(Collectors.joining(" ", " ", ""));
         String variablesString = variables.stream().collect(Collectors.joining(" -e ", " -e ", ""));
+        String portsString = ports.stream().collect(Collectors.joining(" -p ", " -p ", ""));
         String docker = "docker " + command
                 + " --name " + name
                 + paramString
                 + " -v " + volume
-                + " -p " + port
+                + portsString
+//                + " -p " + port
                 + variablesString
                 + " " + container
                 + " " + entryPoint

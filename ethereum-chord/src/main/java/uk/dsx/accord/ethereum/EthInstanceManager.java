@@ -48,7 +48,7 @@ public class EthInstanceManager implements InstanceManager<EthInstance> {
     public Map<String, String> getAdresses() {
         return instanceContainer.getInstances().stream()
                 .flatMap(instance -> instance.getNodes().stream())
-                .collect(Collectors.toMap(EthNode::getIp, node -> "" + node.getPort()));
+                .collect(Collectors.toMap(EthNode::getIp, node -> "" + node.getRpcPort()));
     }
 
     @Override

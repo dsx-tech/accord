@@ -18,6 +18,9 @@ public class NodeConfig {
     @JsonProperty("port")
     private Integer port;
 
+    @JsonProperty("rpc-port")
+    private Integer rpcPort;
+
     @JsonProperty("node-files")
     private List<String> nodeFiles;
 
