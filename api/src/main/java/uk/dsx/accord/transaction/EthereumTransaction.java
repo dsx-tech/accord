@@ -1,8 +1,10 @@
 package uk.dsx.accord.transaction;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class EthereumTransaction extends AbstractTransaction {
     String hash;
     String nonce;

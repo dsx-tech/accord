@@ -1,9 +1,11 @@
 package uk.dsx.accord.block;
 
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 import uk.dsx.accord.transaction.EthereumTransaction;
 
 @Value
+@EqualsAndHashCode(callSuper = true)
 public class EthereumBlock extends AbstractBlock {
     String hash;
     String difficulty;
