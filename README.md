@@ -20,7 +20,7 @@ dependencies {
 ###How to use
 * Up instances on aws cloud
 * Write or copy init.sh script for initialising your chain or use default
-* Create .yml config like and configure it (set paths to files, ip, ports, nodes, users fingerprint)
+* Create .yml config and configure it (set paths to files, ip, ports, nodes, users fingerprint)
 ```yaml
 instances:
   - name: ec-2-one
