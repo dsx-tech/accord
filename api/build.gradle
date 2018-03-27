@@ -3,12 +3,6 @@ version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
 
-sourceCompatibility = 1.8
-
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.9.2'
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.2'
