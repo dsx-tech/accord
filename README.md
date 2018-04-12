@@ -3,7 +3,8 @@ Blockchains unified API library and network initialisation module
 
 only Ethereum available
 
-###Dependency
+### Dependency
+
 Add to build.gradle
 ```groovy
 allprojects {
@@ -17,7 +18,8 @@ dependencies {
 }
 ```
 
-###How to use
+### How to use
+
 * Up instances on aws cloud
 * Write or copy init.sh script for initialising your chain or use default
 * Create .yml config and configure it (set paths to files, ip, ports, nodes, users fingerprint)
@@ -25,35 +27,64 @@ dependencies {
 instances:
   - name: ec-2-one
     user: ec2-user
-    ip: ip
+    ip: -===ip==-
     port : 22
-    fingerprint: path_to_fingerprint_file.pem
+    fingerprint: ethereum-chord/src/main/resources/ethereum/eth-new.pem
+    # Default is ./shared_dir
+    working-dir: /home/ec2-user/shared_dir
     prepare-env-commands:
       - sudo yum update -y
-      - sudo yum install -y docker
+      - sudo yum install -y docker git
       - sudo service docker start
       - sudo groupadd docker
       - sudo gpasswd -a $USER docker
       - sudo usermod -aG docker $USER
-    # Files that not-shared (maybe need for env initialization)
+      
+    # Upload into working-dir/
     instance-files:
-      - ethereum-chord/src/main/resources/ethereum/init.sh
-      - ethereum-chord/src/main/resources/ethereum/genesis.json
-    nodes:
-      - name: boot
-        port: 30304
-        rpc-port: 8101
-        type: ETH
+      - ethereum-chord/src/main/resources/ethereum/genesis_ignore.json
+      
+    
+    post-init-commands:
+      - echo ./shared_dir/genesis_ignore.json
+    post-init-files:
+      - ethereum-chord/src/main/resources/ethereum/genesis_ignore.json
 
+    nodes:
       - name: first
+        type: observer
+        peers:
+          - second
+
+        #If no peers set then discovery=all
+      - name: second
         port: 30305
         rpc-port: 8102
-        type: ETH
+        type: miner
 
-      - name: second
+      - name: third
         port: 30306
         rpc-port: 8103
-        type: ETH
+        type: observer
+
+  - name: ec-2-two
+    user: ec2-user
+    ip: -===ip==-
+    port : 22
+    fingerprint: ethereum-chord/src/main/resources/ethereum/eth-new.pem
+    prepare-env-commands:
+      - sudo yum update -y
+      - sudo yum install -y docker git
+      - sudo service docker start
+      - sudo groupadd docker
+      - sudo gpasswd -a $USER docker
+      - sudo usermod -aG docker $USER
+    nodes:
+      - name: first2
+        type: miner
+        peers:
+          - second
+
 ```
 * Use deploy api like
 ```java
