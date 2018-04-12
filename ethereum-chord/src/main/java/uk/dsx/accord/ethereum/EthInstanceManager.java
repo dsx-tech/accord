@@ -40,15 +40,24 @@ public class EthInstanceManager implements InstanceManager<EthInstance> {
     }
 
 
-    public InstanceManager<EthInstance> addAllInstances(Collection<EthInstance> instance) {
-        instanceContainer.getInstances().addAll(instance);
+    public InstanceManager<EthInstance> addAllInstances(Collection<EthInstance> instances) {
+        instanceContainer.getInstances().addAll(instances);
         return this;
     }
 
-    public Map<String, String> getAdresses() {
+    public Map<String, String> getRpcIpPorts() {
         return instanceContainer.getInstances().stream()
-                .flatMap(instance -> instance.getNodes().stream())
-                .collect(Collectors.toMap(EthNode::getIp, node -> "" + node.getRpcPort()));
+                .map(EthInstance::getNodes)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toMap(EthCommonNode::getName, node -> {
+                    String ip = node.getIp();
+                    String rpcPort = node.requestPorts().stream()
+                            .filter(portBinding -> portBinding.getProtocol().equals("tcp"))
+                            .filter(portBinding -> portBinding.getExposedPort().equals("8545"))
+                            .findFirst()
+                            .map(PortBinding::getHostPort).orElse("");
+                    return ip + ":" + rpcPort;
+                }));
     }
 
     @Override
@@ -63,7 +72,6 @@ public class EthInstanceManager implements InstanceManager<EthInstance> {
 
     @Override
     public void run() {
-//        processors.forEach(processor -> processor.process());
         runProcessor.process(instanceContainer);
     }
 

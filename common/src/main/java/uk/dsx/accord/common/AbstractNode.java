@@ -1,4 +1,7 @@
 package uk.dsx.accord.common;
 
-public class AbstractNode implements Node {
+import lombok.Data;
+
+@Data
+public abstract class AbstractNode implements Node {
 }

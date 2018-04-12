@@ -6,9 +6,10 @@ public class Main {
 
     public static void main(String[] args) throws InstantiationException, InterruptedException {
         EthInstanceManager manager = new EthInstanceManager();
-        manager.withConfig("", DefaultConfiguration.class);
+        manager.withConfig("Absolute path to config here", DefaultConfiguration.class);
         manager.run();
-        manager.terminate();
+        System.out.println(manager.getRpcIpPorts());
+//        manager.terminate();
     }
 
 }

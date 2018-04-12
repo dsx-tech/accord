@@ -6,6 +6,7 @@ import uk.dsx.accord.common.Client;
 import uk.dsx.accord.common.ConfigLoader;
 import uk.dsx.accord.common.client.SSHClient;
 import uk.dsx.accord.ethereum.config.DefaultConfiguration;
+import uk.dsx.accord.ethereum.config.NodeConfig;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,11 +29,16 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
 
             List<Path> allNodesFiles = mapStringsIntoPaths(configuration.getAllNodeFiles());
 
+            List<String> allSharedNodes = configuration.getInstances().stream()
+                    .flatMap(instanceConfig -> instanceConfig.getNodes().stream())
+                    .filter(nodeConfig -> nodeConfig.getPeers() == null || nodeConfig.getPeers().size() == 0)
+                    .map(NodeConfig::getName)
+                    .distinct()
+                    .collect(Collectors.toList());
+
             List<EthInstance> instances = configuration.getInstances().stream().map(instanceConfig -> {
 
-                final String user_dir = "/home/ec2-user";
-                final String shared_dir = user_dir + "/shared_dir";
-
+                final String workingDir = instanceConfig.getWorkingDir();
 
                 Client client = SSHClient.builder()
                         .user(instanceConfig.getUser())
@@ -41,8 +47,15 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
                         .port(instanceConfig.getPort())
                         .build();
 
+//                Client client = DummyClient.builder()
+//                        .user(instanceConfig.getUser())
+//                        .privateKey(instanceConfig.getFingerprintPath())
+//                        .host(instanceConfig.getIp())
+//                        .port(instanceConfig.getPort())
+//                        .build();
+
                 //Nodes creation
-                List<EthNode> nodes = instanceConfig.getNodes().stream().map(nodeConfig -> EthNode.builder()
+                List<EthCommonNode> nodes = instanceConfig.getNodes().stream().map(nodeConfig -> EthCommonNode.builder()
                         .name(nodeConfig.getName())
                         .ip(instanceConfig.getIp())
                         .port(nodeConfig.getPort())
@@ -50,22 +63,27 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
                         .parentInstance(instanceConfig.getName())
                         .type(nodeConfig.getType())
                         .client(client)
-                        .dir(shared_dir + "/" + nodeConfig.getName())
+                        .nodeDir(workingDir + "/.ethereum-" + nodeConfig.getName())
+                        .apiDir(workingDir)
                         .nodeFiles(mapStringsIntoPaths(nodeConfig.getNodeFiles()))
                         .nodeFiles(mapStringsIntoPaths(instanceConfig.getInstanceSpecifiedNodesFiles()))
                         .nodeFiles(mapStringsIntoPaths(instanceConfig.getInstanceFiles()))
                         .nodeFiles(allNodesFiles)
+                        .nodePeers(nodeConfig.getPeers().isEmpty() ? allSharedNodes : nodeConfig.getPeers())
                         .build()).collect(Collectors.toList());
 
                 return EthInstance.builder()
                         .user(instanceConfig.getUser())
                         .ip(instanceConfig.getIp())
+                        .client(client)
                         .port(instanceConfig.getPort())
                         .fingerprintPath(instanceConfig.getFingerprintPath())
-                        .dir(shared_dir)
+                        .dir(workingDir)
                         .commands(new ArrayList<>())
                         .prepareEnvCommands(instanceConfig.getPrepareEnvCommands())
                         .instanceFiles(mapStringsIntoPaths(instanceConfig.getInstanceFiles()))
+                        .postInitCommands(instanceConfig.getPostInitCommands())
+                        .postInitFiles(mapStringsIntoPaths(instanceConfig.getPostInitFiles()))
                         .nodes(nodes)
                         .build();
 

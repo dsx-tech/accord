@@ -2,22 +2,16 @@ package uk.dsx.accord.common;
 
 import java.io.InputStream;
 
-public interface Client {
+public interface Client<C extends Client> {
 
-    <C extends Client> C connect();
+    C sendFile(String sourcePath, String targetPath);
 
-    <C extends Client> C mkdir(String path);
+    C getFile(String sourcePath, String targetPath);
 
-    <C extends Client> C send(String sourcePath, String targetPath);
+    InputStream getFile(String targetPath);
 
-    <C extends Client> C get(String sourcePath, String targetPath);
+    InputStream exec(String command);
 
-    InputStream get(String targetPath);
-
-    <C extends Client> C exec(String command);
-
-    <C extends Client> C reconnect();
-
-    <C extends Client> C close();
+    C close();
 
 }

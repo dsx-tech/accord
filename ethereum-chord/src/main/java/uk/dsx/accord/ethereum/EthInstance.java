@@ -6,10 +6,12 @@ import lombok.EqualsAndHashCode;
 import lombok.Singular;
 import uk.dsx.accord.common.AbstractInstance;
 import uk.dsx.accord.common.Client;
-import uk.dsx.accord.common.client.SSHClient;
 
 import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 
@@ -34,10 +36,16 @@ public class EthInstance extends AbstractInstance {
     @Singular
     private List<Path> instanceFiles;
 
+    @Singular
+    private List<Path> postInitFiles;
+
+    @Singular
+    private List<String> postInitCommands;
+
     private Client client;
 
     @Singular
-    private List<EthNode> nodes;
+    private List<EthCommonNode> nodes;
 
     private List<String> commands;
 
@@ -47,31 +55,33 @@ public class EthInstance extends AbstractInstance {
     }
 
     @Override
-    public EthInstance prepare() {
-        addCommands(prepareEnvCommands);
+    public EthInstance connect() {
         return this;
     }
 
     @Override
-    public EthInstance run() {
-        if (client == null) {
-            this.client = new SSHClient(user, fingerprintPath, ip, port);
-        }
-
-        client.connect();
+    public EthInstance prepare() {
+        addCommands(prepareEnvCommands);
+        addCommand("mkdir -p " + dir);
         return this;
     }
 
     @Override
     public EthInstance clean() {
+        addCommand("sudo docker stop $(docker ps -q -f name=ethereum)");
+        addCommand("sudo docker rm $(docker ps -aq -f name=ethereum)");
         addCommand("sudo rm -rf " + dir);
-        addCommand("sudo docker rm -f $(docker ps -a -q)");
         return this;
     }
 
     @Override
-    public void terminate() {
+    public void disconnect() {
         client.close();
+    }
+
+    @Override
+    public void terminate() {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -89,17 +99,40 @@ public class EthInstance extends AbstractInstance {
     @Override
     public void exec() {
         commands.forEach(command -> client.exec(command));
-        client.reconnect();
+        commands.clear();
+    }
+
+    public void exec(String command) {
+        client.exec(command);
     }
 
     @Override
     public void uploadFile(String source, String target) {
-        client.send(source, target);
+        client.sendFile(source, target);
+    }
+
+    //    @Override
+    public void uploadFile(URL source) {
+        try {
+            Path sourcePath = Paths.get(source.toURI());
+            uploadFile(sourcePath);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void uploadFile(Path source) {
+        client.sendFile(source.toString(), dir + "/" + source.getFileName().toString());
+    }
+
+    public void uploadFiles(List<Path> files) {
+        files.forEach(filePath -> uploadFile(filePath.toString(), dir + "/" + filePath.getFileName().toString()));
     }
 
     @Override
     public InputStream downloadFile(String path) {
-        return client.get(path);
+        return client.getFile(path);
     }
 
 }

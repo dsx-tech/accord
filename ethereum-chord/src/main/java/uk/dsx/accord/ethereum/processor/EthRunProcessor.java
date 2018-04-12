@@ -1,13 +1,16 @@
 package uk.dsx.accord.ethereum.processor;
 
 import uk.dsx.accord.common.InstanceProcessor;
+import uk.dsx.accord.ethereum.EthCommonNode;
 import uk.dsx.accord.ethereum.EthInstance;
 import uk.dsx.accord.ethereum.EthInstanceContainer;
-import uk.dsx.accord.ethereum.EthNode;
+import uk.dsx.accord.ethereum.PortBinding;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class EthRunProcessor implements InstanceProcessor<EthInstanceContainer> {
 
@@ -15,31 +18,83 @@ public class EthRunProcessor implements InstanceProcessor<EthInstanceContainer> 
     public void process(EthInstanceContainer container) {
         List<EthInstance> instances = container.getInstances();
 
+        //Prepare instance and folder
+        instances.forEach(instance -> instance.connect().clean().prepare().exec());
 
-        instances.forEach(instance -> instance
-                .run()
-                .clean()
-                .prepare()
-                .exec());
+        // Upload accord-sh api
+        instances.forEach(instance -> instance.uploadFile(getClass().getResource("/ethereum/accord")));
 
-        //Start bootNode
-        EthNode bootNode = instances.stream()
+        //Wait
+        waitBefore(2000);
+
+        instances.forEach(instance -> instance.exec("chmod +x " + instance.getDir() + "/accord"));
+
+
+        //Wait
+        waitBefore(2000);
+
+        // Upload Instance files
+        instances.forEach(instance -> instance.uploadFiles(instance.getInstanceFiles()));
+
+        // Collect all nodes. Move this to container.
+        List<EthCommonNode> nodes = instances.stream()
                 .map(EthInstance::getNodes)
                 .filter(Objects::nonNull)
                 .flatMap(Collection::stream)
-                .findFirst().orElseThrow(() -> new RuntimeException("aaa"));
+                .collect(Collectors.toList());
 
-        // Run bootNode
-        bootNode.run("enode://boot@127.0.0.1:1111");
-        String bootEnode = bootNode.getEnode();
 
-        // Run node
-        instances.stream()
-                .map(EthInstance::getNodes)
-                .filter(Objects::nonNull)
-                .flatMap(Collection::stream)
-                .filter(node -> !node.equals(bootNode))
-                .forEach(ethNode -> ethNode.run(bootEnode));
+        //Run all nodes
+        nodes.forEach(EthCommonNode::run);
+
+        //Wait
+        waitBefore(2000);
+
+        //Map enodes
+        Map<EthCommonNode, String> enodes = nodes.stream().collect(Collectors.toMap(node -> node, EthCommonNode::requestEnode));
+        Map<EthCommonNode, List<PortBinding>> ports = nodes.stream().collect(Collectors.toMap(node -> node, EthCommonNode::requestPorts));
+        Map<String, String> transformedEnodes = nodes.stream().collect(Collectors.toMap(EthCommonNode::getName, node -> {
+            String ip = node.getIp();
+            String enode = enodes.get(node);
+            PortBinding port = ports.get(node).stream()
+                    .filter(portBinding -> portBinding.getProtocol().equals("tcp"))
+                    .filter(portBinding -> portBinding.getExposedPort().equals("30303"))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Port not found"));
+            return transformEnode(enode, ip, port.getHostPort(), port.getExposedPort());
+        }));
+
+        //Wait
+        waitBefore(3000);
+
+//         Add peers.
+        nodes.forEach(node -> node.getNodePeers().forEach(peer -> {
+            waitBefore(1000);
+            node.addPeer(transformedEnodes.getOrDefault(peer, ""));
+        }));
+
+        // #######################
+        // Post chain init
+        // ######################
+        waitBefore(2000);
+        instances.forEach(instance -> instance.uploadFiles(instance.getPostInitFiles()));
+        waitBefore(2000);
+        instances.forEach(instance -> instance.addCommands(instance.getPostInitCommands()).exec());
+
     }
 
+    private String transformEnode(String enode, String ip, String port, String replacedPort) {
+        return enode
+                .replace("[::]", ip)
+                .replace(":" + replacedPort, ":" + port);
+    }
+
+    public void waitBefore(int timeout) {
+        //Wait
+        try {
+            Thread.sleep(timeout);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 }
