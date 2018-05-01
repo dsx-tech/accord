@@ -10,10 +10,17 @@ import uk.dsx.accord.ethereum.config.NodeConfig;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
@@ -97,10 +104,28 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
         }
     }
 
+    private FileSystem initFileSystem(URI uri) throws IOException {
+        try {
+            return FileSystems.getFileSystem(uri);
+        } catch (FileSystemNotFoundException e) {
+            Map<String, String> env = new HashMap<>();
+            env.put("create", "true");
+            return FileSystems.newFileSystem(uri, env);
+        }
+    }
+
     private List<Path> mapStringsIntoPaths(List<String> stringPaths) {
         if (isNull(stringPaths)) {
             return new ArrayList<>();
         }
-        return stringPaths.stream().map(path -> Paths.get(path)).collect(Collectors.toList());
+        return stringPaths.stream().map(path -> {
+            try {
+                FileSystem zipfs = initFileSystem(new URI(path));
+            } catch (IOException | URISyntaxException e) {
+                e.printStackTrace();
+            }
+            return Paths.get(path);
+        }).collect(Collectors.toList());
     }
+
 }
