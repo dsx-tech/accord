@@ -1,5 +1,6 @@
 #!/bin/bash
 
+########### CD to script directory ###########
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
   DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
@@ -9,93 +10,292 @@ done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 cd $DIR
+##############################################
+
+add_local_peer() {
+    NODE_NAME=$1
+    PEER_NAME=$2
+    CONTAINER_NAME="ethereum-$NODE_NAME"
+    PEER_CONTAINER_NAME="ethereum-$PEER_NAME"
+    ENODE_LINE=$($(./getenode ${PEER_CONTAINER_NAME}) 2>&1 | grep enode | head -n 1)
+    # replaces localhost by container IP
+    PEER_IP=$(docker exec ${PEER_CONTAINER_NAME} ifconfig eth0 | awk '/inet addr/{print substr($2,6)}')
+    ENODE_LINE=$(echo $ENODE_LINE | sed "s/127\.0\.0\.1/$PEER_IP/g" | sed "s/\[\:\:\]/$PEER_IP/g")
+    sh ./addpeer.sh $CONTAINER_NAME $ENODE_LINE
+}
+
+add_peer() {
+    NODE=$1
+    PEER=$2
+    NODE=${NODE:-"node1"}
+    CONTAINER_NAME="ethereum-$NODE"
+    COMMAND='admin.addPeer("'$PEER'")'
+    docker exec $CONTAINER_NAME geth --exec ${COMMAND} attach 2>&1
+}
+
+attach() {
+    NODE=$1
+    NODE=${NODE:-"node1"}
+    CONTAINER_NAME="ethereum-$NODE"
+    docker exec -ti "$CONTAINER_NAME" geth attach
+}
+
+init_genesis() {
+    GEN_NONCE="0xeddeadbabeeddead"
+    GEN_CHAIN_ID=1981
+    GEN_ALLOC='"0x0000000000000000000000000000000000000000": {"balance": "100000"}'
+    GENESIS_TEMPLATE='{
+  "config": {
+    "chainId": ${GEN_CHAIN_ID},
+    "homesteadBlock": 0,
+    "eip155Block": 0,
+    "eip158Block": 0
+  },
+    "alloc"      : {
+    ${GEN_ALLOC}
+  },
+  "coinbase"   : "0x0000000000000000000000000000000000000000",
+  "difficulty" : "0x20000",
+  "extraData"  : "",
+  "gasLimit"   : "0x2fefd8",
+  "nonce"      : "${GEN_NONCE}",
+  "mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "timestamp"  : "0x00"
+}'
+    sed "s/\${GEN_NONCE}/$GEN_NONCE/g" $GENESIS_TEMPLATE | sed "s/\${GEN_ALLOC}/$GEN_ALLOC/g" | sed "s/\${GEN_CHAIN_ID}/$GEN_CHAIN_ID/g" > genesis.json
+}
+
+get_bootnode_url() {
+    BOOT_NODE=$1
+    CONTAINER_NAME="ethereum-$BOOT_NODE"
+    ENODE_LINE=$(docker logs ${CONTAINER_NAME} 2>&1 | grep enode | head -n 1)
+    # replaces localhost by container IP
+    MYIP=$(docker exec ethereum-bootnode ifconfig eth0 | awk '/inet addr/{print substr($2,6)}')
+    ENODE_LINE=$(echo $ENODE_LINE | sed "s/127\.0\.0\.1/$MYIP/g" | sed "s/\[\:\:\]/$MYIP/g")
+    echo "enode:${ENODE_LINE#*enode:}"
+}
+
+get_enode() {
+    echo "VERSION 1"
+    NODE=$1
+    NODE=${NODE:-"node1"}
+    CONTAINER_NAME="ethereum-$NODE"
+    #docker exec $CONTAINER_NAME  geth --exec 'console.log(admin.nodeInfo.enode)' attach
+    docker exec $CONTAINER_NAME  geth --exec 'admin.nodeInfo.enode' attach 2>&1
+}
+
+init_docker() {
+    service docker start
+    groupadd docker
+    gpasswd -a $USER docker
+    usermod -aG docker $USER
+}
+
+kill_all() {
+    docker stop $(docker ps -q -f name=ethereum)
+    docker rm $(docker ps -aq -f name=ethereum)
+}
+
+kill_node(){
+    NODE_NAME=$1
+    NODE_NAME=${NODE_NAME:-"node1"}
+    CONTAINER_NAME="ethereum-$NODE_NAME"
+    echo "Destroying container $CONTAINER_NAME..."
+    docker stop $CONTAINER_NAME
+    docker rm $CONTAINER_NAME
+}
+
+run_bootnode() {
+    #
+    # Runs a bootnode with ethereum official "alltools" image.
+    #
+    NODE_NAME=$1
+    NODE_NAME=${NODE_NAME:-"boot1"}
+    CONTAINER_NAME="ethereum-$NODE_NAME"
+    IMGNAME="ethereum/client-go:alltools-v1.7.3"
+    DATA_ROOT=${DATA_ROOT:-$(pwd)}
+    # generate bootnode key if needed
+    mkdir -p $DATA_ROOT/.bootnode
+    if [ ! -f $DATA_ROOT/.bootnode/boot.key ]; then
+        echo "$DATA_ROOT/.bootnode/boot.key not found, generating..."
+        docker run --rm \
+            -v $DATA_ROOT/.bootnode:/opt/bootnode \
+            $IMGNAME bootnode --genkey /opt/bootnode/boot.key
+        echo "...done!"
+    fi
+    # creates ethereum network
+    #[ ! "$(docker network ls | grep ethereum)" ] && docker network create ethereum
+    [[ -z $BOOTNODE_SERVICE ]] && BOOTNODE_SERVICE="127.0.0.1"
+    docker run -d --name $CONTAINER_NAME \
+        -P \
+        -v $DATA_ROOT/.bootnode:/opt/bootnode \
+        $IMGNAME bootnode --nodekey /opt/bootnode/boot.key --verbosity=3 "$@"
+}
+
+run_node() {
+    IMGNAME="ethereum/client-go:v1.7.3"
+    NODE_NAME=$1
+    GETH_ARGS=$2
+    CONTAINER_NAME="ethereum-$NODE_NAME"
+    DATA_ROOT=${DATA_ROOT:-"$(pwd)/.ether-$NODE_NAME"}
+    DATA_HASH=${DATA_HASH:-"$(pwd)/.ethash"}
+
+    echo "Destroying old container $CONTAINER_NAME..."
+    docker stop $CONTAINER_NAME
+    docker rm $CONTAINER_NAME
+
+    GETH_ARGS=${GETH_ARGS:-'--rpc --rpcaddr=0.0.0.0 --rpcapi=db,eth,net,web3,personal --rpccorsdomain "*" --nodiscover --verbosity=4'}
+
+    if [ ! -f $(pwd)/genesis.json ]; then
+        echo "No genesis.json file found, please run 'genesis.sh'. Aborting."
+        exit
+    fi
+
+    if [ ! -d $DATA_ROOT/keystore ]; then
+        echo "$DATA_ROOT/keystore not found, running 'geth init'..."
+        docker run --rm \
+            -v $DATA_ROOT:/root/.ethereum \
+            -v $(pwd)/genesis.json:/opt/genesis.json \
+            $IMGNAME init /opt/genesis.json
+        echo "...done!"
+    fi
+
+    echo "Running new container $CONTAINER_NAME..."
+    docker run -d --name $CONTAINER_NAME \
+        -P \
+        -v $DATA_ROOT:/root/.ethereum \
+        -v $DATA_HASH:/root/.ethash \
+        -v $(pwd)/genesis.json:/opt/genesis.json \
+        $IMGNAME $GETH_ARGS ${@:3}
+}
+
+run_sandbox() {
+    IMGNAME="ethereum/client-go:alltools-v1.7.3"
+    docker run --rm -ti $IMGNAME sh
+}
+
+run_miner(){
+    NODE_NAME=$1
+    NODE_NAME=${NODE_NAME:-"miner1"}
+    ETHERBASE=${ETHERBASE:-"0x0000000000000000000000000000000000000001"}
+    run_node $NODE_NAME --mine --minerthreads=1 --etherbase="$ETHERBASE"
+}
+
+run_sealer() {
+    NODE_NAME=$1
+    NODE_NAME=${NODE_NAME:-"miner1"}
+    ETHERBASE=${ETHERBASE:-"0x0000000000000000000000000000000000000001"}
+    sh ./runnode.sh $NODE_NAME --mine --unlock="$ETHERBASE"
+}
+
+show_logs() {
+    NODE=$1
+    NODE=${NODE:-"node1"}
+    CONTAINER_NAME="ethereum-$NODE"
+    docker logs ${CONTAINER_NAME}
+}
+
+show_peers() {
+    NODE=$1
+    NODE=${NODE:-"node1"}
+    CONTAINER_NAME="ethereum-$NODE"
+    docker exec -ti "$CONTAINER_NAME" geth --exec 'admin.peers' attach
+}
+
+show_ports() {
+    NODE=$1
+    PEER=$2
+    NODE=${NODE:-"node1"}
+    CONTAINER_NAME="ethereum-$NODE"
+    docker port "$CONTAINER_NAME"
+}
+
+wipe_all() {
+    DATA_ROOT=${DATA_ROOT:-$(pwd)}
+    echo "Removing containers..."
+    docker stop $(docker ps -q -f name=ethereum)
+    docker rm $(docker ps -aq -f name=ethereum)
+    echo "Removing volumes in $DATA_ROOT..."
+    rm -Rf $DATA_ROOT/.ether-*
+    rm -Rf $DATA_ROOT/.ethash
+    rm -Rf $DATA_ROOT/.bootnode
+}
 
 
-COMMAND=${1}
-
-#if [ "$COMMAND" == "init" ]; then
-#    git clone https://github.com/andbul/ethereum.git
-#    cp -r ./ethereum/* .
-#    rm -rf ./ethereum/
-#    sh ./genesis.sh
-#    exit
-#fi
-
-if [ ! -f $(pwd)/runnode.sh ]; then
-    git clone https://github.com/andbul/ethereum.git
-    cp -r ./ethereum/* .
-    rm -rf ./ethereum/
-    sh ./genesis.sh
-fi
-
-if [ ! -f $(pwd)/genesis.json ]; then
-    sh ./genesis.sh
-fi
+main() {
+    COMMAND=${1}
+    if [ ! -f $(pwd)/genesis.json ]; then
+        init_genesis
+    fi
 
 
-if [ "$COMMAND" == "attach" ]; then
-    NODE_NAME=${2}
-    ./attach.sh ${NODE_NAME}
-    exit
-fi
+    if [ "$COMMAND" == "attach" ]; then
+        NODE_NAME=${2}
+        attach ${NODE_NAME}
+        exit
+    fi
 
-if [ "$COMMAND" == "run" ]; then
-    NODE_TYPE=${2}
-    NODE_NAME=${3}
-    [ -z "$NODE_TYPE" ] && echo "[ERROR] Node type is empty!" && exit
-    [ -z "$NODE_NAME" ] && echo "[ERROR] Node name is empty!" && exit
-    echo "[INFO] Runnig node: $NODE_NAME, type: $NODE_TYPE"
-    [ "$NODE_TYPE" == "boot" ] && sh ./runbootnode.sh
-    [ "$NODE_TYPE" == "miner" ] && sh ./runminer.sh ${NODE_NAME}
-    [ "$NODE_TYPE" == "observer" ] && sh ./runnode.sh ${NODE_NAME}
-    [ "$NODE_TYPE" == "sealer" ] && sh ./runsealer.sh ${NODE_NAME}
-    exit
-fi
+    if [ "$COMMAND" == "run" ]; then
+        NODE_TYPE=${2}
+        NODE_NAME=${3}
+        [ -z "$NODE_TYPE" ] && echo "[ERROR] Node type is empty!" && exit
+        [ -z "$NODE_NAME" ] && echo "[ERROR] Node name is empty!" && exit
+        echo "[INFO] Runnig node: $NODE_NAME, type: $NODE_TYPE"
+        [ "$NODE_TYPE" == "boot" ] && run_bootnode
+        [ "$NODE_TYPE" == "miner" ] && run_miner ${NODE_NAME}
+        [ "$NODE_TYPE" == "observer" ] && run_node ${NODE_NAME}
+        [ "$NODE_TYPE" == "sealer" ] && run_sealer ${NODE_NAME}
+        exit
+    fi
 
-if [ "$COMMAND" == "get" ]; then
-    OBJECT_TYPE=${2}
-    NODE_NAME=${3}
-    [ -z "$OBJECT_TYPE" ] && echo "[ERROR] Object type is empty!" && exit
-    [ -z "$NODE_NAME" ] && echo "[ERROR] Node name is empty!" && exit
-    echo "[INFO] Getting : $OBJECT_TYPE from node: $NODE_NAME"
-    [ "$OBJECT_TYPE" == "enode" ] && sh ./getenode.sh ${NODE_NAME}
-    [ "$OBJECT_TYPE" == "bootenode" ] && sh ./getbootnodeurl.sh ${NODE_NAME}
-    [ "$OBJECT_TYPE" == "peers" ] && sh ./showpeers.sh ${NODE_NAME}
-    [ "$OBJECT_TYPE" == "logs" ] && sh ./showlogs.sh ${NODE_NAME}
-    [ "$OBJECT_TYPE" == "ports" ] && sh ./showports.sh ${NODE_NAME}
-    exit
-fi
+    if [ "$COMMAND" == "get" ]; then
+        OBJECT_TYPE=${2}
+        NODE_NAME=${3}
+        [ -z "$OBJECT_TYPE" ] && echo "[ERROR] Object type is empty!" && exit
+        [ -z "$NODE_NAME" ] && echo "[ERROR] Node name is empty!" && exit
+        echo "[INFO] Getting : $OBJECT_TYPE from node: $NODE_NAME"
+        [ "$OBJECT_TYPE" == "enode" ] && get_enode ${NODE_NAME}
+        [ "$OBJECT_TYPE" == "bootenode" ] && get_bootnode_url ${NODE_NAME}
+        [ "$OBJECT_TYPE" == "peers" ] && show_peers ${NODE_NAME}
+        [ "$OBJECT_TYPE" == "logs" ] && show_logs ${NODE_NAME}
+        [ "$OBJECT_TYPE" == "ports" ] && show_ports ${NODE_NAME}
+        exit
+    fi
 
-if [ "$COMMAND" == "add" ]; then
-    OBJECT_TYPE=${2}
-    NODE_NAME=${3}
-    OBJEECT=${4}
-    [ -z "$OBJECT_TYPE" ] && echo "[ERROR] Object type is empty!" && exit
-    [ -z "$NODE_NAME" ] && echo "[ERROR] Node name is empty!" && exit
-    echo "Adding : $OBJECT_TYPE to node: $NODE_NAME"
-    [ "$OBJECT_TYPE" == "peer" ] && sh ./addpeer.sh ${NODE_NAME} ${OBJEECT}
-    exit
-fi
+    if [ "$COMMAND" == "add" ]; then
+        OBJECT_TYPE=${2}
+        NODE_NAME=${3}
+        OBJEECT=${4}
+        [ -z "$OBJECT_TYPE" ] && echo "[ERROR] Object type is empty!" && exit
+        [ -z "$NODE_NAME" ] && echo "[ERROR] Node name is empty!" && exit
+        echo "Adding : $OBJECT_TYPE to node: $NODE_NAME"
+        [ "$OBJECT_TYPE" == "peer" ] && add_peer ${NODE_NAME} ${OBJEECT}
+        exit
+    fi
 
-if [ "$COMMAND" == "kill" ]; then
-    KILL_TYPE=${2}
-    NODE_NAME=${3}
-    [ -z "$KILL_TYPE" ] && echo "[ERROR] You must set killing type!" && exit
-#    [ -z "$NODE_NAME" ] && echo "[ERROR] Node name is empty!" && exit
-    echo "[INFO] Killing node: $NODE_NAME"
-    [ "$KILL_TYPE" == "node" ] && sh ./killnode.sh ${NODE_NAME}
-    [ "$KILL_TYPE" == "all" ] && sh ./killall.sh
-    exit
-fi
+    if [ "$COMMAND" == "kill" ]; then
+        KILL_TYPE=${2}
+        NODE_NAME=${3}
+        [ -z "$KILL_TYPE" ] && echo "[ERROR] You must set killing type!" && exit
+    #    [ -z "$NODE_NAME" ] && echo "[ERROR] Node name is empty!" && exit
+        echo "[INFO] Killing node: $NODE_NAME"
+        [ "$KILL_TYPE" == "node" ] && kill_node ${NODE_NAME}
+        [ "$KILL_TYPE" == "all" ] && kill_all
+        exit
+    fi
 
 
-if [ "$COMMAND" == "wipe" ]; then
-    KILL_TYPE=${2}
-    NODE_NAME=${3}
-    [ -z "$KILL_TYPE" ] && echo "[ERROR] You must set killing type!" && exit
-#    [ -z "$NODE_NAME" ] && echo "[ERROR] Node name is empty!" && exit
-    echo "[INFO] Killing node: $NODE_NAME"
-    [ "$KILL_TYPE" == "node" ] && echo "Unsupported operation."
-    [ "$KILL_TYPE" == "all" ] && sudo $(sh ./wipeall.sh)
-    exit
-fi
+    if [ "$COMMAND" == "wipe" ]; then
+        KILL_TYPE=${2}
+        NODE_NAME=${3}
+        [ -z "$KILL_TYPE" ] && echo "[ERROR] You must set killing type!" && exit
+    #    [ -z "$NODE_NAME" ] && echo "[ERROR] Node name is empty!" && exit
+        echo "[INFO] Killing node: $NODE_NAME"
+        [ "$KILL_TYPE" == "node" ] && echo "Unsupported operation."
+        [ "$KILL_TYPE" == "all" ] && wipe_all
+        exit
+    fi
+}
+
+main "$@"
