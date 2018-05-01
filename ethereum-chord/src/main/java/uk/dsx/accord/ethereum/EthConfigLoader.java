@@ -122,7 +122,7 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
         return stringPaths.stream().map(path -> {
             Path path1 = Paths.get(path);
             try {
-                URI uri = path1.toAbsolutePath().toUri();
+                URI uri = path1.toUri();
                 FileSystem zipfs = initFileSystem(uri);
             } catch (IOException e) {
                 e.printStackTrace();
