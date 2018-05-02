@@ -136,7 +136,7 @@ run_bootnode() {
 run_node() {
     IMGNAME="ethereum/client-go:v1.7.3"
     NODE_NAME=$1
-    GETH_ARGS=$2
+#    GETH_ARGS=$2
     CONTAINER_NAME="ethereum-$NODE_NAME"
     DATA_ROOT=${DATA_ROOT:-"$(pwd)/.ether-$NODE_NAME"}
     DATA_HASH=${DATA_HASH:-"$(pwd)/.ethash"}
@@ -167,7 +167,7 @@ run_node() {
         -v $DATA_ROOT:/root/.ethereum \
         -v $DATA_HASH:/root/.ethash \
         -v $(pwd)/genesis.json:/opt/genesis.json \
-        $IMGNAME $GETH_ARGS ${@:3}
+        $IMGNAME $GETH_ARGS ${@:2}
 }
 
 run_sandbox() {
