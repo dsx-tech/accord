@@ -4,14 +4,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Singular;
+import org.apache.commons.io.FilenameUtils;
 import uk.dsx.accord.common.AbstractInstance;
 import uk.dsx.accord.common.Client;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 
@@ -107,23 +107,25 @@ public class EthInstance extends AbstractInstance {
     }
 
     @Override
+    public void uploadFile(InputStream source, String target) {
+        client.sendFile(source, target);
+    }
+
+    @Override
     public void uploadFile(String source, String target) {
         client.sendFile(source, target);
     }
 
-    //    @Override
-    public void uploadFile(URL source) {
-        try {
-            Path sourcePath = Paths.get(source.toURI());
-            uploadFile(sourcePath);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     @Override
-    public void uploadFile(Path source) {
-        client.sendFile(source.toString(), dir + "/" + source.getFileName().toString());
+    public void uploadFile(URL source) {
+        try {
+            String name = FilenameUtils.getName(source.getPath());
+            InputStream fileStream = source.openStream();
+            client.sendFile(fileStream, dir + "/" + name);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void uploadFiles(List<Path> files) {

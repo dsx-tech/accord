@@ -36,6 +36,20 @@ public class SSHClient implements Client<SSHClient> {
 
     //TODO: that methods must be available only after connection
     @Override
+    public SSHClient sendFile(InputStream sourcePath, String targetPath) {
+        try {
+            connect();
+            ChannelSftp sftp = (ChannelSftp) openChannel("sftp");
+            sftp.connect();
+            sftp.put(sourcePath, targetPath);
+            sftp.disconnect();
+        } catch (JSchException | SftpException e) {
+            throw new RuntimeException("Could not send file", e);
+        }
+        return this;
+    }
+
+    @Override
     public SSHClient sendFile(String sourcePath, String targetPath) {
         try {
             connect();

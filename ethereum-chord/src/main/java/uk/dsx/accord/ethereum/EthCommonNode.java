@@ -108,6 +108,10 @@ public class EthCommonNode {
                 .collect(Collectors.joining("\n"));
     }
 
+    public void uploadFile(InputStream source, String target) {
+        client.sendFile(source, target);
+    }
+
     public void uploadFile(String source, String target) {
         client.sendFile(source, target);
     }

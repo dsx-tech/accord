@@ -39,6 +39,12 @@ public class DummyClient implements Client<DummyClient> {
     }
 
     @Override
+    public DummyClient sendFile(InputStream sourcePath, String targetPath) {
+        System.out.println("SEND: from stream:" + sourcePath + " to " + targetPath);
+        return this;
+    }
+
+    @Override
     public DummyClient sendFile(String sourcePath, String targetPath) {
         System.out.println("SEND: from " + sourcePath + " to " + targetPath);
         return this;

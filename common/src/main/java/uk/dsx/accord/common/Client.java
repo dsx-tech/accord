@@ -4,6 +4,8 @@ import java.io.InputStream;
 
 public interface Client<C extends Client> {
 
+    C sendFile(InputStream sourcePath, String targetPath);
+
     C sendFile(String sourcePath, String targetPath);
 
     C getFile(String sourcePath, String targetPath);

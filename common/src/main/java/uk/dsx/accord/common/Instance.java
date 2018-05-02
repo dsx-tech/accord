@@ -25,11 +25,10 @@ public interface Instance {
 
     void exec();
 
-    void uploadFile(Path source);
 
     void uploadFiles(List<Path> files);
 
-    void uploadFile(String source, String target);
+    void uploadFile(InputStream source, String target);
 
     InputStream downloadFile(String path);
 

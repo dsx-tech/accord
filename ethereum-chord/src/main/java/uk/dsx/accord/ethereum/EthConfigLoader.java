@@ -10,12 +10,10 @@ import uk.dsx.accord.ethereum.config.NodeConfig;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.nio.file.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
@@ -99,35 +97,10 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
         }
     }
 
-    private FileSystem initFileSystem(URI uri) throws IOException {
-        try {
-            return FileSystems.getFileSystem(uri);
-        } catch (FileSystemNotFoundException e) {
-            Map<String, String> env = new HashMap<>();
-            env.put("create", "true");
-            try {
-                return FileSystems.newFileSystem(uri, env);
-            } catch (IllegalArgumentException e2) {
-                return FileSystems.getDefault();
-            }
-        } catch (IllegalArgumentException e2) {
-            return FileSystems.getDefault();
-        }
-    }
-
     private List<Path> mapStringsIntoPaths(List<String> stringPaths) {
         if (isNull(stringPaths)) {
             return new ArrayList<>();
         }
-        return stringPaths.stream().map(path -> {
-            Path path1 = Paths.get(path);
-            try {
-                URI uri = path1.toUri();
-                FileSystem zipfs = initFileSystem(uri);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return path1;
-        }).collect(Collectors.toList());
+        return stringPaths.stream().map(path -> Paths.get(path)).collect(Collectors.toList());
     }
 }
