@@ -41,13 +41,15 @@ public class EthCommonNode {
 
     private String apiDir;
 
+    private String nodeArgs;
+
     private State state = State.NEW;
 
     @NonNull
     private List<String> nodePeers;
 
     public void run() {
-        exec("/accord run " + type);
+        exec("/accord run node ", nodeArgs);
     }
 
     public void kill() {

@@ -4,6 +4,7 @@ import uk.dsx.accord.common.InstanceManager;
 import uk.dsx.accord.common.Processor;
 import uk.dsx.accord.common.config.Configuration;
 import uk.dsx.accord.ethereum.config.DefaultConfiguration;
+import uk.dsx.accord.ethereum.config.EthConfigLoader;
 import uk.dsx.accord.ethereum.processor.EthRunProcessor;
 import uk.dsx.accord.ethereum.processor.EthTerminateProcessor;
 

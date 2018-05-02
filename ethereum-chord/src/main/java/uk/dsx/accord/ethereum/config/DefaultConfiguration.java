@@ -9,10 +9,12 @@ import java.util.List;
 @Data
 public class DefaultConfiguration implements Configuration {
 
-    @JsonProperty("all-nodes-files")
+    @JsonProperty("nodes-files")
     private List<String> allNodeFiles;
 
     @JsonProperty("instances")
     private List<InstanceConfig> instances;
 
+    @JsonProperty("chain")
+    private ChainConfig chainConfig = new ChainConfig();
 }

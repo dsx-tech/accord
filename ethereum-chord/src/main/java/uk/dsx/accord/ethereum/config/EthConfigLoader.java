@@ -1,12 +1,13 @@
-package uk.dsx.accord.ethereum;
+package uk.dsx.accord.ethereum.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import uk.dsx.accord.common.Client;
 import uk.dsx.accord.common.ConfigLoader;
 import uk.dsx.accord.common.client.SSHClient;
-import uk.dsx.accord.ethereum.config.DefaultConfiguration;
-import uk.dsx.accord.ethereum.config.NodeConfig;
+import uk.dsx.accord.ethereum.EthCommonNode;
+import uk.dsx.accord.ethereum.EthInstance;
+import uk.dsx.accord.ethereum.EthInstanceContainer;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
@@ -27,6 +29,7 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
             ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
             DefaultConfiguration configuration = mapper.readValue(new File(file), configClass);
 
+
             List<Path> allNodesFiles = mapStringsIntoPaths(configuration.getAllNodeFiles());
 
             List<String> allSharedNodes = configuration.getInstances().stream()
@@ -35,6 +38,14 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
                     .map(NodeConfig::getName)
                     .distinct()
                     .collect(Collectors.toList());
+
+            ChainConfig chainConfig = configuration.getChainConfig();
+
+            long nodesCount = configuration.getInstances().stream()
+                    .mapToLong(instanceConfig -> instanceConfig.getNodes().size())
+                    .sum();
+
+            Path genesis = generateGenesis(nodesCount, chainConfig);
 
             List<EthInstance> instances = configuration.getInstances().stream().map(instanceConfig -> {
 
@@ -65,6 +76,8 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
                         .client(client)
                         .nodeDir(workingDir + "/.ethereum-" + nodeConfig.getName())
                         .apiDir(workingDir)
+                        .nodeArgs(getNodeRunArgs(nodeConfig.getType(), chainConfig))
+                        .nodeFile(genesis)
                         .nodeFiles(mapStringsIntoPaths(nodeConfig.getNodeFiles()))
                         .nodeFiles(mapStringsIntoPaths(instanceConfig.getInstanceSpecifiedNodesFiles()))
                         .nodeFiles(mapStringsIntoPaths(instanceConfig.getInstanceFiles()))
@@ -81,6 +94,7 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
                         .dir(workingDir)
                         .commands(new ArrayList<>())
                         .prepareEnvCommands(instanceConfig.getPrepareEnvCommands())
+                        .instanceFile(genesis)
                         .instanceFiles(mapStringsIntoPaths(instanceConfig.getInstanceFiles()))
                         .postInitCommands(instanceConfig.getPostInitCommands())
                         .postInitFiles(mapStringsIntoPaths(instanceConfig.getPostInitFiles()))
@@ -95,6 +109,47 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
             e.printStackTrace();
             throw new RuntimeException(e);
         }
+    }
+
+    private String getNodeRunArgs(NodeType type, ChainConfig chainConfig) {
+        switch (type) {
+            case OBSERVER:
+                return chainConfig.getCommonOptions();
+            case MINER:
+                return chainConfig.getCommonOptions() + " " + chainConfig.getMinerOptions();
+            default:
+                return chainConfig.getCommonOptions();
+        }
+    }
+
+    private Path generateGenesis(long nodesCount, ChainConfig chainConfig) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+
+            ChainConfig.Genesis genesis = chainConfig.getGenesis();
+            Map<String, ChainConfig.Alloc> allocMap = genesis.getAlloc();
+
+            // Alloc generation
+            // TODO: Rewrite it
+//            if (allocMap.isEmpty()){
+//                LongStream.range(0,nodesCount)
+//                        .mapToObj(seed -> RandomStringUtils.random(40, true, true))
+//                        .map(String::toLowerCase)
+//                        .forEach(id -> allocMap.put(id, new ChainConfig.Alloc(chainConfig.getInitialBalance())));
+//            }
+
+            File file = new File("temp/genesis.json");
+            file.getParentFile().mkdirs();
+            file.createNewFile();
+            file.deleteOnExit();
+
+            mapper.writerWithDefaultPrettyPrinter().writeValue(file, chainConfig.getGenesis());
+
+            return Paths.get("temp/genesis.json");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     private List<Path> mapStringsIntoPaths(List<String> stringPaths) {

@@ -136,7 +136,7 @@ run_bootnode() {
 run_node() {
     IMGNAME="ethereum/client-go:v1.7.3"
     NODE_NAME=$1
-#    GETH_ARGS=$2
+    GETH_ARGS=${@:2}
     CONTAINER_NAME="ethereum-$NODE_NAME"
     DATA_ROOT=${DATA_ROOT:-"$(pwd)/.ether-$NODE_NAME"}
     DATA_HASH=${DATA_HASH:-"$(pwd)/.ethash"}
@@ -144,8 +144,6 @@ run_node() {
     echo "Destroying old container $CONTAINER_NAME..."
     docker stop $CONTAINER_NAME
     docker rm $CONTAINER_NAME
-
-    GETH_ARGS=${GETH_ARGS:-'--rpc --rpcaddr=0.0.0.0 --rpcapi=db,eth,net,web3,personal --rpccorsdomain "*" --nodiscover --verbosity=4'}
 
     if [ ! -f $(pwd)/genesis.json ]; then
         echo "No genesis.json file found, please run 'genesis.sh'. Aborting."
@@ -167,7 +165,7 @@ run_node() {
         -v $DATA_ROOT:/root/.ethereum \
         -v $DATA_HASH:/root/.ethash \
         -v $(pwd)/genesis.json:/opt/genesis.json \
-        $IMGNAME $GETH_ARGS ${@:2}
+        $IMGNAME $GETH_ARGS
 }
 
 run_sandbox() {
@@ -178,15 +176,34 @@ run_sandbox() {
 run_miner(){
     NODE_NAME=$1
     NODE_NAME=${NODE_NAME:-"miner1"}
-    ETHERBASE=${ETHERBASE:-"0x0000000000000000000000000000000000000001"}
-    run_node $NODE_NAME --mine --minerthreads=1 --etherbase="$ETHERBASE"
+
+    GETH_ARGS=${@:2}
+    GETH_ARGS=${GETH_ARGS:-'/
+        --rpc /
+        --rpcaddr=0.0.0.0 /
+        --rpcapi=db,eth,net,web3,personal /
+        --rpccorsdomain "*" /
+        --nodiscover /
+        --verbosity=4 /
+        --mine /
+        --minerthreads=1 /
+        --etherbase="0x0000000000000000000000000000000000000001"'}
+    run_node ${NODE_NAME} ${GETH_ARGS}
 }
 
-run_sealer() {
+run_observer(){
     NODE_NAME=$1
     NODE_NAME=${NODE_NAME:-"miner1"}
-    ETHERBASE=${ETHERBASE:-"0x0000000000000000000000000000000000000001"}
-    sh ./runnode.sh $NODE_NAME --mine --unlock="$ETHERBASE"
+
+    GETH_ARGS=${@:2}
+    GETH_ARGS=${GETH_ARGS:-'/
+        --rpc /
+        --rpcaddr=0.0.0.0 /
+        --rpcapi=db,eth,net,web3,personal /
+        --rpccorsdomain "*" /
+        --nodiscover /
+        --verbosity=4 '}
+    run_node ${NODE_NAME} ${GETH_ARGS}
 }
 
 show_logs() {
@@ -243,9 +260,9 @@ main() {
         [ -z "$NODE_NAME" ] && echo "[ERROR] Node name is empty!" && exit
         echo "[INFO] Runnig node: $NODE_NAME, type: $NODE_TYPE"
         [ "$NODE_TYPE" == "boot" ] && run_bootnode
-        [ "$NODE_TYPE" == "miner" ] && run_miner ${NODE_NAME}
-        [ "$NODE_TYPE" == "observer" ] && run_node ${NODE_NAME}
-        [ "$NODE_TYPE" == "sealer" ] && run_sealer ${NODE_NAME}
+        [ "$NODE_TYPE" == "miner" ] && run_miner ${NODE_NAME} ${@:4}
+        [ "$NODE_TYPE" == "observer" ] && run_observer ${NODE_NAME} ${@:4}
+        [ "$NODE_TYPE" == "node" ] && run_node ${NODE_NAME} ${@:4}
         exit
     fi
 
