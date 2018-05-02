@@ -44,6 +44,7 @@ public class ChainConfig {
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     class Config {
 
+        // Best solution ever
         Integer chainId = ChainConfig.this.chainId;
         Long homesteadBlock = 0L;
         Long eip155Block = 0L;

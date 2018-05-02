@@ -2,6 +2,7 @@ package uk.dsx.accord.ethereum.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.apache.commons.lang3.StringUtils;
 import uk.dsx.accord.common.Client;
 import uk.dsx.accord.common.ConfigLoader;
 import uk.dsx.accord.common.client.SSHClient;
@@ -13,10 +14,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 import static java.util.Objects.isNull;
 
@@ -129,14 +132,16 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
             ChainConfig.Genesis genesis = chainConfig.getGenesis();
             Map<String, ChainConfig.Alloc> allocMap = genesis.getAlloc();
 
-            // Alloc generation
-            // TODO: Rewrite it
-//            if (allocMap.isEmpty()){
-//                LongStream.range(0,nodesCount)
+//             ChainConfig.Alloc generation
+//             TODO: Rewrite it
+            if (allocMap.isEmpty()) {
+                DecimalFormat forty = new DecimalFormat(StringUtils.repeat("0", 40));
+                LongStream.rangeClosed(1, nodesCount)
 //                        .mapToObj(seed -> RandomStringUtils.random(40, true, true))
-//                        .map(String::toLowerCase)
-//                        .forEach(id -> allocMap.put(id, new ChainConfig.Alloc(chainConfig.getInitialBalance())));
-//            }
+                        .mapToObj(seed -> forty.format(seed))
+                        .map(String::toLowerCase)
+                        .forEach(id -> allocMap.put(id, new ChainConfig.Alloc(chainConfig.getInitialBalance())));
+            }
 
             File file = new File("temp/genesis.json");
             file.getParentFile().mkdirs();
