@@ -24,12 +24,12 @@ instances:
 
     nodes:
       - name: first
-        type: observer
+        type: miner
         peers:
           - second
 
       - name: second
-        type: observer
+        type: miner
 
       - name: third
         type: observer

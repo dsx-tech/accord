@@ -43,9 +43,13 @@ public class EthRunProcessor implements InstanceProcessor<EthInstanceContainer> 
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
 
+//        nodes.forEach(EthCommonNode::init);
+//        waitBefore(2000);
 
         //Run all nodes
         nodes.forEach(EthCommonNode::run);
+
+        nodes.forEach(EthCommonNode::uploadNodeFiles);
 
         //Wait
         waitBefore(2000);

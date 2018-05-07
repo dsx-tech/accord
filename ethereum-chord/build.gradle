@@ -5,5 +5,5 @@ apply plugin: 'java'
 
 dependencies {
     compile project(':common')
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile group: 'org.web3j', name: 'crypto', version: '3.4.0'
 }

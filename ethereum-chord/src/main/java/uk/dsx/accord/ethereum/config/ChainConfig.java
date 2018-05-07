@@ -15,14 +15,14 @@ public class ChainConfig {
     String initialBalance = "1000";
     boolean turnOnEtherbase = true;
 
-    String commonOptions = "--networkid {networkId} --rpc --rpcaddr=0.0.0.0 --rpcapi=db,eth,net,web3,personal --rpccorsdomain \"*\" --nodiscover --verbosity=4";
-    String minerOptions = "--mine --minerthreads=1";
+    String commonOptions = "--networkid={networkId} --rpc --rpcaddr=0.0.0.0 --rpcapi=db,eth,net,web3,personal --rpccorsdomain=\\'*\\' --nodiscover --verbosity=4";
+    String minerOptions = "--mine --minerthreads=1 --etherbase={etherbase}";
     Genesis genesis = new Genesis();
 
 
     @Data
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    static class Genesis {
+    public static class Genesis {
         Config config = new Config();
         String nonce;
         String timestamp;
@@ -38,11 +38,8 @@ public class ChainConfig {
 
     @Data
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    static class Config {
-
-        // Best solution ever
-//        Integer chainId = ChainConfig.this.chainId;
-        Integer chainId;
+    public static class Config {
+        Integer chainId = 497;
         Long homesteadBlock = 0L;
         Long eip155Block = 0L;
         Long eip158Block = 0L;
@@ -51,7 +48,7 @@ public class ChainConfig {
     @Data
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     @AllArgsConstructor
-    static class Alloc {
+    public static class Alloc {
         String balance;
     }
 

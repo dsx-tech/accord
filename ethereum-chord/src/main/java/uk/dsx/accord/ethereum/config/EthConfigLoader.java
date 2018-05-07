@@ -3,24 +3,27 @@ package uk.dsx.accord.ethereum.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.io.FileUtils;
 import uk.dsx.accord.common.Client;
 import uk.dsx.accord.common.ConfigLoader;
-import uk.dsx.accord.common.client.DummyClient;
+import uk.dsx.accord.common.client.SSHClient;
 import uk.dsx.accord.ethereum.EthCommonNode;
 import uk.dsx.accord.ethereum.EthInstance;
 import uk.dsx.accord.ethereum.EthInstanceContainer;
+import uk.dsx.accord.ethereum.FilePath;
+import uk.dsx.accord.ethereum.config.ChainConfig.Genesis;
+import uk.dsx.accord.ethereum.crypto.Account;
+import uk.dsx.accord.ethereum.crypto.CryptoUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.LongStream;
+import java.util.stream.IntStream;
 
 import static java.util.Objects.isNull;
 
@@ -31,6 +34,10 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
     public EthInstanceContainer loadConfig(String file, Class<? extends DefaultConfiguration> configClass) {
         try {
             log.info("Mapping config from {} to {}", file, configClass);
+
+            String tempDir = "temp";
+            String keyStoreDir = tempDir + "/keystore";
+            FileUtils.cleanDirectory(new File(tempDir));
 
             ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
             DefaultConfiguration configuration = mapper.readValue(new File(file), configClass);
@@ -47,29 +54,37 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
 
             ChainConfig chainConfig = configuration.getChainConfig();
 
-            long nodesCount = configuration.getInstances().stream()
-                    .mapToLong(instanceConfig -> instanceConfig.getNodes().size())
+            int nodesCount = configuration.getInstances().stream()
+                    .mapToInt(instanceConfig -> instanceConfig.getNodes().size())
                     .sum();
 
-            Path genesis = generateGenesis(nodesCount, chainConfig);
+            List<String> nodeNames = configuration.getInstances().stream()
+                    .flatMap(instanceConfig -> instanceConfig.getNodes().stream())
+                    .map(NodeConfig::getName)
+                    .collect(Collectors.toList());
+            List<Account> accounts = CryptoUtils.generateAccounts(nodesCount, chainConfig.getInitialBalance(), keyStoreDir);
+            List<FilePath> accountsFiles = getAccountsFiles(accounts);
+            Map<String, Account> etherbases = mapEtherbase(accounts, nodeNames);
 
+
+            Path genesis = generateGenesis(accounts, chainConfig, tempDir);
+            // Nodes and instances creation
             List<EthInstance> instances = configuration.getInstances().stream().map(instanceConfig -> {
-
                 final String workingDir = instanceConfig.getWorkingDir();
 
-//                Client client = SSHClient.builder()
-//                        .user(instanceConfig.getUser())
-//                        .privateKey(instanceConfig.getFingerprintPath())
-//                        .host(instanceConfig.getIp())
-//                        .port(instanceConfig.getPort())
-//                        .build();
-
-                Client client = DummyClient.builder()
+                Client client = SSHClient.builder()
                         .user(instanceConfig.getUser())
                         .privateKey(instanceConfig.getFingerprintPath())
                         .host(instanceConfig.getIp())
                         .port(instanceConfig.getPort())
                         .build();
+
+//                Client client = DummyClient.builder()
+//                        .user(instanceConfig.getUser())
+//                        .privateKey(instanceConfig.getFingerprintPath())
+//                        .host(instanceConfig.getIp())
+//                        .port(instanceConfig.getPort())
+//                        .build();
 
                 //Nodes creation
                 List<EthCommonNode> nodes = instanceConfig.getNodes().stream().map(nodeConfig -> EthCommonNode.builder()
@@ -80,11 +95,12 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
                         .parentInstance(instanceConfig.getName())
                         .type(nodeConfig.getType())
                         .client(client)
-                        .nodeDir(workingDir + "/.ethereum-" + nodeConfig.getName())
+                        .nodeDir(workingDir + "/.ether-" + nodeConfig.getName())
                         .apiDir(workingDir)
-                        .nodeArgs(getNodeRunArgs(nodeConfig.getType(), chainConfig))
+                        .etherBaseAccount(etherbases.get(nodeConfig.getName()))
+                        .nodeArgs(getNodeRunArgs(nodeConfig.getType(), chainConfig, etherbases.get(nodeConfig.getName())))
+                        .accountFiles(accountsFiles)
                         .nodeFile(genesis)
-                        .nodeFiles(mapStringsIntoPaths(nodeConfig.getNodeFiles()))
                         .nodeFiles(mapStringsIntoPaths(instanceConfig.getInstanceSpecifiedNodesFiles()))
                         .nodeFiles(mapStringsIntoPaths(instanceConfig.getInstanceFiles()))
                         .nodeFiles(allNodesFiles)
@@ -117,46 +133,40 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
         }
     }
 
-    private String getNodeRunArgs(NodeType type, ChainConfig chainConfig) {
+    private String getNodeRunArgs(NodeType type, ChainConfig chainConfig, Account etherbase) {
+        String comonOptions = chainConfig.getCommonOptions()
+                .replace("{networkId}", String.valueOf(chainConfig.getChainId()));
+
+        String minerOptions = chainConfig.getMinerOptions()
+                .replace("{etherbase}", etherbase.getAddress());
+
         switch (type) {
             case OBSERVER:
-                return chainConfig.getCommonOptions();
+                return comonOptions;
             case MINER:
-                return chainConfig.getCommonOptions() + " " + chainConfig.getMinerOptions();
+                return comonOptions + " " + minerOptions;
             default:
-                return chainConfig.getCommonOptions();
+                return comonOptions;
         }
     }
 
-    private Path generateGenesis(long nodesCount, ChainConfig chainConfig) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
+    private Path generateGenesis(List<Account> accounts, ChainConfig chainConfig, String genesisDir) {
+        Genesis genesis = chainConfig.getGenesis();
+        ChainConfig.Config config = genesis.getConfig();
 
-            ChainConfig.Genesis genesis = chainConfig.getGenesis();
-            Map<String, ChainConfig.Alloc> allocMap = genesis.getAlloc();
+        Integer networkId = chainConfig.getChainId();
+        config.setChainId(networkId);
 
-//             ChainConfig.Alloc generation
-            if (allocMap.isEmpty()) {
-                DecimalFormat forty = new DecimalFormat(StringUtils.repeat("0", 40));
-                LongStream.rangeClosed(1, nodesCount)
-//                        .mapToObj(seed -> RandomStringUtils.random(40, true, true))
-                        .mapToObj(seed -> forty.format(seed))
-                        .map(String::toLowerCase)
-                        .forEach(id -> allocMap.put(id, new ChainConfig.Alloc(chainConfig.getInitialBalance())));
-            }
+        CryptoUtils.addAccountsToGenesis(accounts, genesis);
+        Path genesisPath = CryptoUtils.createGenesisFile(genesis, genesisDir);
 
-            File file = new File("temp/genesis.json");
-            file.getParentFile().mkdirs();
-            file.createNewFile();
-            file.deleteOnExit();
+        return genesisPath;
+    }
 
-            mapper.writerWithDefaultPrettyPrinter().writeValue(file, chainConfig.getGenesis());
-
-            return Paths.get("temp/genesis.json");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
+    private List<FilePath> getAccountsFiles(List<Account> accounts) {
+        return accounts.stream().map(Account::getKeyFile)
+                .map(keyFile -> new FilePath(keyFile, "keystore/" + Paths.get(keyFile).getFileName().toString()))
+                .collect(Collectors.toList());
     }
 
     private List<Path> mapStringsIntoPaths(List<String> stringPaths) {
@@ -165,4 +175,20 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
         }
         return stringPaths.stream().map(path -> Paths.get(path)).collect(Collectors.toList());
     }
+
+    private List<FilePath> mapStringsIntoFileBindings(List<String> stringPaths) {
+        if (isNull(stringPaths)) {
+            return new ArrayList<>();
+        }
+        return stringPaths.stream().map(path -> FilePath.get(path)).collect(Collectors.toList());
+    }
+
+
+    private Map<String, Account> mapEtherbase(List<Account> accounts, List<String> nodeNames) {
+        int size = Integer.min(accounts.size(), nodeNames.size());
+        return IntStream.range(0, size)
+                .boxed()
+                .collect(Collectors.toMap(nodeNames::get, accounts::get));
+    }
+
 }

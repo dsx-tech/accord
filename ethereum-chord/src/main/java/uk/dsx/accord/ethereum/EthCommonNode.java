@@ -4,6 +4,7 @@ import lombok.*;
 import uk.dsx.accord.common.Client;
 import uk.dsx.accord.common.enums.State;
 import uk.dsx.accord.ethereum.config.NodeType;
+import uk.dsx.accord.ethereum.crypto.Account;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -35,6 +36,8 @@ public class EthCommonNode {
     private NodeType type;
 
     @Singular
+    private List<FilePath> accountFiles;
+    @Singular
     private List<Path> nodeFiles;
 
     private String nodeDir;
@@ -48,10 +51,18 @@ public class EthCommonNode {
     @NonNull
     private List<String> nodePeers;
 
+    private Account etherBaseAccount;
 
     public void init() {
         nodeFiles.forEach(path -> uploadFile(path.toString(), nodeDir + "/"));
-        exec("/accord init node ", nodeArgs);
+        accountFiles.forEach(path -> uploadFile(path.getLocalPath(), nodeDir + "/" + path.getRemotePath()));
+//        exec("/accord init node ", nodeArgs);
+    }
+
+    public void uploadNodeFiles() {
+        nodeFiles.forEach(path -> uploadFile(path.toString(), nodeDir + "/"));
+        accountFiles.forEach(path -> uploadFile(path.getLocalPath(), nodeDir + "/" + path.getRemotePath()));
+//        exec("/accord init node ", nodeArgs);
     }
 
     public void run() {

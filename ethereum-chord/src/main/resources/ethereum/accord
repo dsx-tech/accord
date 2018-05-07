@@ -140,6 +140,12 @@ run_node() {
     CONTAINER_NAME="ethereum-$NODE_NAME"
     DATA_ROOT=${DATA_ROOT:-"$(pwd)/.ether-$NODE_NAME"}
     DATA_HASH=${DATA_HASH:-"$(pwd)/.ethash"}
+    KEYSTORE=${KEYSTORE:-"$(pwd)/keystore"}
+
+    mkdir ${DATA_ROOT}
+    mkdir ${DATA_HASH}
+    mkdir ${KEYSTORE}
+
 
     echo "Destroying old container $CONTAINER_NAME..."
     docker stop $CONTAINER_NAME
@@ -159,10 +165,15 @@ run_node() {
         echo "...done!"
     fi
 
+    #TODO: Hotfix
+    sudo chmod 777 $DATA_ROOT/keystore
+
     echo "Running new container $CONTAINER_NAME..."
+    echo $GETH_ARGS
     docker run -d --name $CONTAINER_NAME \
         -P \
         -v $DATA_ROOT:/root/.ethereum \
+        -v $KEYSTORE:/root/.ethereum/keystorer \
         -v $DATA_HASH:/root/.ethash \
         -v $(pwd)/genesis.json:/opt/genesis.json \
         $IMGNAME $GETH_ARGS
@@ -263,6 +274,7 @@ main() {
         [ "$NODE_TYPE" == "miner" ] && run_miner ${NODE_NAME} ${@:4}
         [ "$NODE_TYPE" == "observer" ] && run_observer ${NODE_NAME} ${@:4}
         [ "$NODE_TYPE" == "node" ] && run_node ${NODE_NAME} ${@:4}
+        [ "$NODE_TYPE" == "sandbox" ] && run_sandbox
         exit
     fi
 
