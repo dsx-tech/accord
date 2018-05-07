@@ -2,10 +2,11 @@ package uk.dsx.accord.ethereum.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import org.apache.commons.lang3.StringUtils;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang.StringUtils;
 import uk.dsx.accord.common.Client;
 import uk.dsx.accord.common.ConfigLoader;
-import uk.dsx.accord.common.client.SSHClient;
+import uk.dsx.accord.common.client.DummyClient;
 import uk.dsx.accord.ethereum.EthCommonNode;
 import uk.dsx.accord.ethereum.EthInstance;
 import uk.dsx.accord.ethereum.EthInstanceContainer;
@@ -23,11 +24,13 @@ import java.util.stream.LongStream;
 
 import static java.util.Objects.isNull;
 
+@Log4j2
 public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, DefaultConfiguration> {
 
     @Override
     public EthInstanceContainer loadConfig(String file, Class<? extends DefaultConfiguration> configClass) {
         try {
+            log.info("Mapping config from {} to {}", file, configClass);
 
             ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
             DefaultConfiguration configuration = mapper.readValue(new File(file), configClass);
@@ -54,19 +57,19 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
 
                 final String workingDir = instanceConfig.getWorkingDir();
 
-                Client client = SSHClient.builder()
-                        .user(instanceConfig.getUser())
-                        .privateKey(instanceConfig.getFingerprintPath())
-                        .host(instanceConfig.getIp())
-                        .port(instanceConfig.getPort())
-                        .build();
-
-//                Client client = DummyClient.builder()
+//                Client client = SSHClient.builder()
 //                        .user(instanceConfig.getUser())
 //                        .privateKey(instanceConfig.getFingerprintPath())
 //                        .host(instanceConfig.getIp())
 //                        .port(instanceConfig.getPort())
 //                        .build();
+
+                Client client = DummyClient.builder()
+                        .user(instanceConfig.getUser())
+                        .privateKey(instanceConfig.getFingerprintPath())
+                        .host(instanceConfig.getIp())
+                        .port(instanceConfig.getPort())
+                        .build();
 
                 //Nodes creation
                 List<EthCommonNode> nodes = instanceConfig.getNodes().stream().map(nodeConfig -> EthCommonNode.builder()
@@ -106,7 +109,7 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
 
             }).collect(Collectors.toList());
 
-            System.out.println("Mapped");
+            log.info("Config mapped");
             return new EthInstanceContainer(instances);
         } catch (IOException e) {
             e.printStackTrace();
@@ -133,7 +136,6 @@ public class EthConfigLoader implements ConfigLoader<EthInstanceContainer, Defau
             Map<String, ChainConfig.Alloc> allocMap = genesis.getAlloc();
 
 //             ChainConfig.Alloc generation
-//             TODO: Rewrite it
             if (allocMap.isEmpty()) {
                 DecimalFormat forty = new DecimalFormat(StringUtils.repeat("0", 40));
                 LongStream.rangeClosed(1, nodesCount)

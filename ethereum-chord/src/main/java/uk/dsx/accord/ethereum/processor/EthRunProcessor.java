@@ -56,11 +56,7 @@ public class EthRunProcessor implements InstanceProcessor<EthInstanceContainer> 
         Map<String, String> transformedEnodes = nodes.stream().collect(Collectors.toMap(EthCommonNode::getName, node -> {
             String ip = node.getIp();
             String enode = enodes.get(node);
-            PortBinding port = ports.get(node).stream()
-                    .filter(portBinding -> portBinding.getProtocol().equals("tcp"))
-                    .filter(portBinding -> portBinding.getExposedPort().equals("30303"))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Port not found"));
+            PortBinding port = getP2PPort(ports.get(node));
             return transformEnode(enode, ip, port.getHostPort(), port.getExposedPort());
         }));
 
@@ -81,6 +77,14 @@ public class EthRunProcessor implements InstanceProcessor<EthInstanceContainer> 
         waitBefore(2000);
         instances.forEach(instance -> instance.addCommands(instance.getPostInitCommands()).exec());
 
+    }
+
+    private PortBinding getP2PPort(List<PortBinding> ports) {
+        return ports.stream()
+                .filter(portBinding -> portBinding.getProtocol().equals("tcp"))
+                .filter(portBinding -> portBinding.getExposedPort().equals("30303"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Port not found"));
     }
 
     private String transformEnode(String enode, String ip, String port, String replacedPort) {

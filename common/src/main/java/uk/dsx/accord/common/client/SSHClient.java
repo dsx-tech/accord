@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import uk.dsx.accord.common.Client;
 
 import java.io.*;
@@ -13,6 +14,7 @@ import java.io.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
+@Log4j2
 public class SSHClient implements Client<SSHClient> {
 
     private String user;
@@ -36,12 +38,13 @@ public class SSHClient implements Client<SSHClient> {
 
     //TODO: that methods must be available only after connection
     @Override
-    public SSHClient sendFile(InputStream sourcePath, String targetPath) {
+    public SSHClient sendFile(InputStream sourcePath, String remotePath) {
         try {
+            log.debug("SEND: from InputStream to {}", remotePath);
             connect();
             ChannelSftp sftp = (ChannelSftp) openChannel("sftp");
             sftp.connect();
-            sftp.put(sourcePath, targetPath);
+            sftp.put(sourcePath, remotePath);
             sftp.disconnect();
         } catch (JSchException | SftpException e) {
             throw new RuntimeException("Could not send file", e);
@@ -50,12 +53,13 @@ public class SSHClient implements Client<SSHClient> {
     }
 
     @Override
-    public SSHClient sendFile(String sourcePath, String targetPath) {
+    public SSHClient sendFile(String sourcePath, String remotePath) {
         try {
+            log.debug("SEND: from {} to {}", sourcePath, remotePath);
             connect();
             ChannelSftp sftp = (ChannelSftp) openChannel("sftp");
             sftp.connect();
-            sftp.put(sourcePath, targetPath);
+            sftp.put(sourcePath, remotePath);
             sftp.disconnect();
         } catch (JSchException | SftpException e) {
             throw new RuntimeException("Could not send file", e);
@@ -64,12 +68,13 @@ public class SSHClient implements Client<SSHClient> {
     }
 
     @Override
-    public SSHClient getFile(String sourcePath, String targetPath) {
+    public SSHClient getFile(String remotePath, String targetPath) {
         try {
+            log.debug("GET: from {} to {}", remotePath, targetPath);
             connect();
             ChannelSftp sftp = (ChannelSftp) openChannel("sftp");
             sftp.connect();
-            sftp.get(sourcePath, targetPath);
+            sftp.get(remotePath, targetPath);
             sftp.disconnect();
         } catch (JSchException | SftpException e) {
             throw new RuntimeException("Could not download file", e);
@@ -78,12 +83,13 @@ public class SSHClient implements Client<SSHClient> {
     }
 
     @Override
-    public InputStream getFile(String targetPath) {
+    public InputStream getFile(String remotePath) {
         try {
+            log.debug("GET: from {} to Stream", remotePath);
             connect();
             ChannelSftp sftp = (ChannelSftp) openChannel("sftp");
             sftp.connect();
-            InputStream out = sftp.get(targetPath);
+            InputStream out = sftp.get(remotePath);
             sftp.disconnect();
             return out;
         } catch (JSchException | SftpException e) {
@@ -96,11 +102,9 @@ public class SSHClient implements Client<SSHClient> {
         InputStream out = null;
         try {
             connect();
-            System.out.println("Host " + host + " connected.");
-            System.out.println("EXEC " + host + " command:" + command);
+            log.debug("EXEC host: {} command: {}", host, command);
             ChannelExec channel = (ChannelExec) openChannel("exec");
             out = channel.getInputStream();
-//            channel.setErrStream(System.err);
             channel.setCommand(command);
             channel.connect();
 
@@ -114,7 +118,7 @@ public class SSHClient implements Client<SSHClient> {
             }
             while (!channel.isClosed()) {
             }
-            System.out.println(logs.toString());
+            log.debug("RESULT: {}", logs.toString());
             out = new ByteArrayInputStream(logs.toString().getBytes());
             channel.disconnect();
         } catch (IOException | JSchException e) {

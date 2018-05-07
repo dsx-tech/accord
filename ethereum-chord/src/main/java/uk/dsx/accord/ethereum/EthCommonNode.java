@@ -48,6 +48,12 @@ public class EthCommonNode {
     @NonNull
     private List<String> nodePeers;
 
+
+    public void init() {
+        nodeFiles.forEach(path -> uploadFile(path.toString(), nodeDir + "/"));
+        exec("/accord init node ", nodeArgs);
+    }
+
     public void run() {
         exec("/accord run node ", nodeArgs);
     }
@@ -120,10 +126,6 @@ public class EthCommonNode {
 
     public InputStream downloadFile(String path) {
         return client.getFile(path);
-    }
-
-    public void uploadFiles(String nodeDir) {
-        nodeFiles.forEach(path -> uploadFile(path.toString(), nodeDir + "/" + path.getFileName().toString()));
     }
 
     private InputStream exec(String command) {

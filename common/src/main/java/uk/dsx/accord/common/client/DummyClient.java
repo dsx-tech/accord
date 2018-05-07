@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import uk.dsx.accord.common.Client;
 
 import java.io.ByteArrayInputStream;
@@ -17,6 +18,7 @@ import java.io.InputStream;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
+@Log4j2
 public class DummyClient implements Client<DummyClient> {
 
     private String user;
@@ -40,19 +42,19 @@ public class DummyClient implements Client<DummyClient> {
 
     @Override
     public DummyClient sendFile(InputStream sourcePath, String targetPath) {
-        System.out.println("SEND: from stream:" + sourcePath + " to " + targetPath);
+        log.debug("SEND: from stream: to " + targetPath);
         return this;
     }
 
     @Override
     public DummyClient sendFile(String sourcePath, String targetPath) {
-        System.out.println("SEND: from " + sourcePath + " to " + targetPath);
+        log.debug("SEND: from " + sourcePath + " to " + targetPath);
         return this;
     }
 
     @Override
     public DummyClient getFile(String sourcePath, String targetPath) {
-        System.out.println("GET: from " + sourcePath + " to " + targetPath);
+        log.debug("GET: from " + sourcePath + " to " + targetPath);
         return this;
     }
 
@@ -73,7 +75,7 @@ public class DummyClient implements Client<DummyClient> {
     @Override
     public InputStream exec(String command) {
         InputStream in = null;
-        System.out.println("EXEC: " + command);
+        log.debug("EXEC: " + command);
         String logs = "\n\n\n\n\n ... \n\n\n Some logs \n\n\n ... \n\n\n\n\n ";
         if (command.matches(".*accord get enode .*")) {
             String enode = "enode://6f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0@10.3.58.6:30303?discport=30301";
